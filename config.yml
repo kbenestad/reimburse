@@ -1,0 +1,54 @@
+# =============================================================================
+# Reimbursement Form — Configuration
+# =============================================================================
+
+# Organization
+organization: "Center for Asylum Protection"
+logo: yes                    # yes|no — if yes, loads assets/logo.png or logo.jpg
+logo-maxwidth: 4             # cm — maximum logo width on PDF
+
+# Page setup
+page-size: A4                # A4 or letter
+
+# Typography
+# Standard fonts: Helvetica, Times, Courier (plus Bold/Italic variants)
+# Custom: place a .ttf file in assets/ and use the filename (e.g. "assets/MyFont.ttf")
+font-body: Helvetica
+font-heading: Helvetica
+font-monospace: Courier
+font-size: 10                # base font size in pt for PDF
+
+# Branding
+accent-colour: "#1a3a5c"
+
+# Form text (appears on PDF)
+intro: ""
+footer: "Confidential"
+
+# Base currency (ISO code — must appear in currencies list)
+currency-base: USD
+
+# Available currencies
+currencies:
+  - code: USD
+    name: United States dollar
+  - code: THB
+    name: Thai baht
+  - code: EUR
+    name: Euro
+  - code: NOK
+    name: Norwegian krone
+
+# Account codes (shown in dropdown)
+accounts:
+  - "1000 - General Operations"
+  - "2000 - Travel & Transport"
+  - "3000 - Office Supplies"
+  - "4000 - Professional Services"
+
+# Programs (shown in dropdown — "Other" adds a text field)
+programs:
+  - "General Operations"
+  - "Legal Aid Program"
+  - "Protection Program"
+  - Other

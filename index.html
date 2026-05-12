@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reimbursement Form</title>
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://unpkg.com/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+<style>
+:root { --accent: #1a3a5c; --bg: #f5f6f8; --card: #fff; --text: #222; --muted: #666; --border: #d0d4da; --err: #c62828; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+.wrap { max-width: 920px; margin: 24px auto; background: var(--card); border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,.08); padding: 32px; }
+.loading { text-align: center; padding: 80px; color: var(--muted); }
+
+/* Header */
+.form-hdr { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+.form-hdr .logo img { max-height: 56px; }
+.form-hdr .logo .org-name { font-size: 18px; font-weight: 700; color: var(--accent); }
+.form-hdr .title { font-size: 18px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .5px; text-align: right; }
+
+/* Field rows */
+.frow { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+.fgrp { display: flex; flex-direction: column; min-width: 120px; }
+.fgrp.grow { flex: 1; }
+.fgrp label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; letter-spacing: .3px; }
+input, select, textarea { padding: 7px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; font-family: inherit; background: #fff; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(26,58,92,.1); }
+input[readonly] { background: #f0f1f3; color: var(--muted); }
+textarea { resize: vertical; min-height: 48px; width: 100%; }
+.input-err { border-color: var(--err) !important; }
+
+/* Divider */
+.divider { border: none; border-top: 2px solid var(--accent); margin: 20px 0; }
+.divider-light { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+
+/* Item block */
+.item-blk { border: 1px solid var(--border); border-radius: 6px; padding: 20px; margin-bottom: 16px; background: #fafbfc; position: relative; }
+.item-hdr { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 4px; }
+.item-hdr label { font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--accent); white-space: nowrap; }
+.item-subtotal { font-weight: 600; font-size: 14px; white-space: nowrap; color: var(--accent); }
+.item-name { flex: 1; }
+
+/* Line block */
+.line-blk { padding: 12px 0; }
+.line-blk + .line-blk { border-top: 1px dashed var(--border); }
+
+/* Buttons */
+.btn { padding: 7px 14px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; font-family: inherit; }
+.btn-add { background: transparent; color: var(--accent); border: 1px dashed var(--accent); }
+.btn-add:hover { background: rgba(26,58,92,.04); }
+.btn-rm { background: transparent; color: var(--err); font-size: 12px; padding: 4px 8px; }
+.btn-rm:hover { text-decoration: underline; }
+.btn-gen { background: var(--accent); color: #fff; font-size: 15px; padding: 12px 32px; width: 100%; margin-top: 16px; border-radius: 6px; }
+.btn-gen:hover { opacity: .9; }
+.btn-gen:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Totals */
+.totals-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; }
+.grand-total { font-size: 17px; font-weight: 700; color: var(--accent); }
+
+/* Receipt area */
+.receipt-area { margin-top: 6px; padding: 8px 10px; background: #eef1f5; border-radius: 4px; }
+.receipt-file { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 13px; }
+.receipt-file .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Custom currency dropdown */
+.cdd { position: relative; display: inline-block; }
+.cdd-trigger { padding: 7px 10px; border: 1px solid var(--border); border-radius: 4px; background: #fff; cursor: pointer; font-size: 14px; font-family: inherit; text-align: left; min-width: 70px; }
+.cdd-trigger:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(26,58,92,.1); }
+.cdd-panel { display: none; position: absolute; top: calc(100% + 2px); left: 0; background: #fff; border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 6px 20px rgba(0,0,0,.14); z-index: 100; min-width: 220px; max-height: 260px; overflow-y: auto; }
+.cdd-panel.open { display: block; }
+.cdd-opt { padding: 8px 12px; cursor: pointer; }
+.cdd-opt:hover { background: #eef1f5; }
+.cdd-opt .code { font-weight: 600; font-size: 14px; }
+.cdd-opt .name { font-size: 11px; color: var(--muted); }
+.cdd-opt + .cdd-opt { border-top: 1px solid #eee; }
+
+/* Tooltip */
+.tip { position: relative; cursor: help; }
+.tip::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 5px 9px; border-radius: 4px; font-size: 11px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .15s; }
+.tip:hover::after { opacity: 1; }
+
+/* Validation summary */
+.val-summary { background: #fce4e4; border: 1px solid var(--err); border-radius: 6px; padding: 14px 18px; margin-bottom: 16px; color: var(--err); font-size: 13px; line-height: 1.7; }
+
+@media (max-width: 640px) {
+  .wrap { margin: 8px; padding: 16px; }
+  .frow { flex-direction: column; gap: 10px; }
+  .form-hdr { flex-direction: column; gap: 8px; }
+}
+</style>
+</head>
+<body>
+<div id="app"><p class="loading">Loading configuration…</p></div>
+
+<script>
+(async function() {
+'use strict';
+
+// ========== UTILITIES ==========
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+const $ = (sel, ctx) => (ctx || document).querySelector(sel);
+const $$ = (sel, ctx) => [...(ctx || document).querySelectorAll(sel)];
+const el = (tag, attrs, children) => {
+  const e = document.createElement(tag);
+  if (attrs) Object.entries(attrs).forEach(([k,v]) => {
+    if (k === 'className') e.className = v;
+    else if (k === 'style' && typeof v === 'object') Object.assign(e.style, v);
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (v != null && v !== false) e.setAttribute(k, v);
+  });
+  if (children) (Array.isArray(children) ? children : [children]).forEach(c => {
+    if (c == null) return;
+    e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+  });
+  return e;
+};
+function fmtAmt(n) {
+  const v = parseFloat(n);
+  return isNaN(v) ? '–' : v.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function defaultPeriod() {
+  const d = new Date();
+  const lastDay = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate() === d.getDate();
+  const y = lastDay ? d.getFullYear() : (d.getMonth() === 0 ? d.getFullYear()-1 : d.getFullYear());
+  const m = lastDay ? d.getMonth() : (d.getMonth() === 0 ? 11 : d.getMonth()-1);
+  const from = new Date(y, m, 1);
+  const to = new Date(y, m+1, 0);
+  return { from: from.toISOString().slice(0,10), to: to.toISOString().slice(0,10) };
+}
+
+// ========== CONFIG ==========
+let CFG;
+async function loadConfig() {
+  const res = await fetch('config.yml');
+  if (!res.ok) throw new Error('Cannot load config.yml');
+  CFG = jsyaml.load(await res.text());
+  document.documentElement.style.setProperty('--accent', CFG['accent-colour'] || '#1a3a5c');
+}
+
+// ========== STATE ==========
+const state = { staff: '', periodFrom: '', periodTo: '', items: [], _grandTotal: 0 };
+
+function newItem() { return { id: uid(), name: '', lines: [newLine()], _subtotal: 0 }; }
+function newLine() {
+  return {
+    id: uid(), date: '', description: '', currency: CFG['currency-base'],
+    fxRate: '1.00000', vendor: '', hasReceipt: true, receipts: [],
+    noReceiptExplanation: '', amount: '', account: '', program: '', programOther: ''
+  };
+}
+
+// ========== CALCULATIONS ==========
+function recalc() {
+  let grand = 0;
+  state.items.forEach(item => {
+    let sub = 0;
+    item.lines.forEach(ln => {
+      const amt = parseFloat(ln.amount) || 0;
+      const rate = parseFloat(ln.fxRate) || 1;
+      sub += rate > 0 ? amt / rate : 0;
+    });
+    item._subtotal = sub;
+    grand += sub;
+    const se = $(`#sub-${item.id}`);
+    if (se) se.textContent = `${CFG['currency-base']} ${fmtAmt(sub)}`;
+  });
+  state._grandTotal = grand;
+  const ge = $('#grand-total');
+  if (ge) ge.textContent = `${CFG['currency-base']} ${fmtAmt(grand)}`;
+}
+
+// ========== CURRENCY DROPDOWN ==========
+function makeCDD(currencies, value, onChange) {
+  const wrap = el('div', {className:'cdd'});
+  const trigger = el('button', {className:'cdd-trigger', type:'button'}, value || 'Select');
+  const panel = el('div', {className:'cdd-panel'});
+  currencies.forEach(c => {
+    const opt = el('div', {className:'cdd-opt', onClick: () => {
+      trigger.textContent = c.code;
+      panel.classList.remove('open');
+      onChange(c.code);
+    }}, [el('div', {className:'code'}, c.code), el('div', {className:'name'}, c.name)]);
+    panel.appendChild(opt);
+  });
+  trigger.addEventListener('click', e => { e.stopPropagation(); panel.classList.toggle('open'); });
+  document.addEventListener('click', () => panel.classList.remove('open'));
+  wrap.append(trigger, panel);
+  wrap._setValue = code => { trigger.textContent = code; };
+  return wrap;
+}
+
+// ========== SELECT HELPER ==========
+function makeSelect(options, value, onChange, placeholder) {
+  const s = el('select');
+  if (placeholder) s.appendChild(el('option', {value:'', disabled:'', selected: !value ? '' : undefined}, placeholder));
+  options.forEach(o => {
+    const opt = el('option', {value: o}, o);
+    if (o === value) opt.selected = true;
+    s.appendChild(opt);
+  });
+  s.addEventListener('change', () => onChange(s.value));
+  return s;
+}
+
+// ========== FORM RENDERING ==========
+function render() {
+  const app = $('#app');
+  app.innerHTML = '';
+  const wrap = el('div', {className:'wrap'});
+
+  // Validation summary placeholder
+  const valBox = el('div', {id:'val-box'});
+  wrap.appendChild(valBox);
+
+  // Header
+  const hdr = el('div', {className:'form-hdr'});
+  const logoDiv = el('div', {className:'logo'});
+  if (CFG.logo === true || CFG.logo === 'yes') {
+    const img = el('img', {alt: CFG.organization || ''});
+    img.src = 'assets/logo.png';
+    img.onerror = function() { this.src = 'assets/logo.jpg'; this.onerror = function() {
+      this.replaceWith(el('span', {className:'org-name'}, CFG.organization || ''));
+    }; };
+    if (CFG['logo-maxwidth']) img.style.maxWidth = CFG['logo-maxwidth'] + 'cm';
+    logoDiv.appendChild(img);
+  } else {
+    logoDiv.appendChild(el('span', {className:'org-name'}, CFG.organization || ''));
+  }
+  hdr.append(logoDiv, el('div', {className:'title'}, 'Reimbursement Form'));
+  wrap.appendChild(hdr);
+
+  // Staff / Period / Currency row
+  const savedStaff = localStorage.getItem('reimb-staff') || '';
+  if (savedStaff && !state.staff) state.staff = savedStaff;
+  const period = defaultPeriod();
+  if (!state.periodFrom) state.periodFrom = period.from;
+  if (!state.periodTo) state.periodTo = period.to;
+
+  const staffInput = el('input', {type:'text', value: state.staff, placeholder:'Full name'});
+  staffInput.addEventListener('input', () => { state.staff = staffInput.value; localStorage.setItem('reimb-staff', staffInput.value); });
+
+  const fromInput = el('input', {type:'date', value: state.periodFrom});
+  fromInput.addEventListener('change', () => { state.periodFrom = fromInput.value; });
+  const toInput = el('input', {type:'date', value: state.periodTo});
+  toInput.addEventListener('change', () => { state.periodTo = toInput.value; });
+
+  const baseBadge = el('span', {style:{fontWeight:'600', fontSize:'14px', padding:'7px 0'}}, CFG['currency-base']);
+
+  wrap.appendChild(el('div', {className:'frow'}, [
+    el('div', {className:'fgrp grow'}, [el('label', null, 'Staff'), staffInput]),
+    el('div', {className:'fgrp'}, [el('label', null, 'Period from'), fromInput]),
+    el('div', {className:'fgrp'}, [el('label', null, 'to'), toInput]),
+    el('div', {className:'fgrp'}, [el('label', null, 'Base currency'), baseBadge]),
+  ]));
+
+  wrap.appendChild(el('hr', {className:'divider'}));
+
+  // Items container
+  const itemsBox = el('div', {id:'items-box'});
+  state.items.forEach(item => itemsBox.appendChild(renderItem(item)));
+  wrap.appendChild(itemsBox);
+
+  // Add item + Grand total row
+  const addItemBtn = el('button', {className:'btn btn-add', onClick: () => {
+    const item = newItem();
+    state.items.push(item);
+    itemsBox.appendChild(renderItem(item));
+    recalc();
+  }}, '+ Add item / project / travel');
+
+  wrap.appendChild(el('div', {className:'totals-row'}, [
+    addItemBtn,
+    el('div', {className:'grand-total'}, [
+      'Total reimbursement claim: ',
+      el('span', {id:'grand-total'}, `${CFG['currency-base']} ${fmtAmt(0)}`)
+    ])
+  ]));
+
+  // Generate button
+  wrap.appendChild(el('button', {className:'btn btn-gen', id:'gen-btn', onClick: onGenerate}, 'Generate Reimbursement Form'));
+
+  app.appendChild(wrap);
+  recalc();
+}
+
+function renderItem(item) {
+  const blk = el('div', {className:'item-blk', id:`item-${item.id}`});
+
+  // Item header
+  const nameIn = el('input', {className:'item-name', type:'text', value: item.name, placeholder:'Item / project / travel name'});
+  nameIn.addEventListener('input', () => { item.name = nameIn.value; });
+
+  const rmBtn = el('button', {className:'btn btn-rm', onClick: () => {
+    state.items = state.items.filter(i => i.id !== item.id);
+    blk.remove();
+    recalc();
+  }}, '✕ Remove');
+
+  blk.appendChild(el('div', {className:'item-hdr'}, [
+    el('label', null, 'Item / Project / Travel'),
+    el('span', {className:'item-subtotal'}, [
+      'Subtotal: ', el('span', {id:`sub-${item.id}`}, `${CFG['currency-base']} ${fmtAmt(0)}`)
+    ]),
+    rmBtn
+  ]));
+  blk.appendChild(nameIn);
+
+  // Lines container
+  const linesBox = el('div', {id:`lines-${item.id}`});
+  item.lines.forEach(ln => linesBox.appendChild(renderLine(ln, item)));
+  blk.appendChild(linesBox);
+
+  // Add line button
+  blk.appendChild(el('button', {className:'btn btn-add', style:{marginTop:'10px'}, onClick: () => {
+    const ln = newLine();
+    item.lines.push(ln);
+    linesBox.appendChild(renderLine(ln, item));
+    recalc();
+  }}, '+ Add line'));
+
+  return blk;
+}
+
+function renderLine(ln, item) {
+  const blk = el('div', {className:'line-blk', id:`line-${ln.id}`});
+
+  const currencies = CFG.currencies || [];
+  const baseCur = CFG['currency-base'];
+
+  // Row 1: Date, Description, Currency, FX Rate
+  const dateIn = el('input', {type:'date', value: ln.date, style:{width:'140px'}});
+  dateIn.addEventListener('change', () => { ln.date = dateIn.value; });
+
+  const descIn = el('input', {type:'text', value: ln.description, placeholder:'Description'});
+  descIn.addEventListener('input', () => { ln.description = descIn.value; });
+
+  const curDD = makeCDD(currencies, ln.currency, code => {
+    ln.currency = code;
+    fxIn.dataset.tip = `Units of ${code} per 1 ${baseCur}`;
+    if (code === baseCur) { ln.fxRate = '1.00000'; fxIn.value = '1.00000'; fxIn.readOnly = true; }
+    else { fxIn.readOnly = false; if (ln.fxRate === '1.00000') { ln.fxRate = ''; fxIn.value = ''; } }
+    recalc();
+  });
+
+  const fxIn = el('input', {type:'text', value: ln.fxRate, style:{width:'100px'}, placeholder:'0.00000'});
+  fxIn.readOnly = ln.currency === baseCur;
+  fxIn.className = 'tip';
+  fxIn.dataset.tip = `Units of ${ln.currency || '?'} per 1 ${baseCur}`;
+  fxIn.addEventListener('input', () => { ln.fxRate = fxIn.value; recalc(); });
+
+  blk.appendChild(el('div', {className:'frow'}, [
+    el('div', {className:'fgrp'}, [el('label', null, 'Date'), dateIn]),
+    el('div', {className:'fgrp grow'}, [el('label', null, 'Description'), descIn]),
+    el('div', {className:'fgrp'}, [el('label', null, 'Currency'), curDD]),
+    el('div', {className:'fgrp'}, [el('label', null, 'FX rate'), fxIn]),
+  ]));
+
+  // Row 2: Vendor, Receipt, Amount
+  const vendIn = el('input', {type:'text', value: ln.vendor, placeholder:'Vendor name'});
+  vendIn.addEventListener('input', () => { ln.vendor = vendIn.value; });
+
+  const receiptSel = makeSelect(['Yes','No'], ln.hasReceipt ? 'Yes' : 'No', v => {
+    ln.hasReceipt = v === 'Yes';
+    receiptArea.innerHTML = '';
+    receiptArea.appendChild(buildReceiptArea(ln));
+  });
+
+  const amtIn = el('input', {type:'text', value: ln.amount, style:{width:'120px', textAlign:'right'}, placeholder:'0.00'});
+  amtIn.addEventListener('input', () => { ln.amount = amtIn.value; recalc(); });
+
+  blk.appendChild(el('div', {className:'frow'}, [
+    el('div', {className:'fgrp grow'}, [el('label', null, 'Vendor'), vendIn]),
+    el('div', {className:'fgrp'}, [el('label', null, 'Receipt'), receiptSel]),
+    el('div', {className:'fgrp'}, [el('label', null, 'Amount'), amtIn]),
+  ]));
+
+  // Row 3: Account, Program
+  const acctSel = makeSelect(CFG.accounts || [], ln.account, v => { ln.account = v; }, 'Select account');
+  const progOptions = (CFG.programs || []);
+  const progSel = makeSelect(progOptions, ln.program, v => {
+    ln.program = v;
+    const otherBox = $(`#prog-other-${ln.id}`);
+    if (otherBox) otherBox.style.display = v === 'Other' ? 'block' : 'none';
+  }, 'Select program');
+
+  const progOtherIn = el('input', {type:'text', id:`prog-other-${ln.id}`, value: ln.programOther, placeholder:'Specify program', style:{display: ln.program === 'Other' ? 'block' : 'none', marginTop:'6px'}});
+  progOtherIn.addEventListener('input', () => { ln.programOther = progOtherIn.value; });
+
+  const progGrp = el('div', {className:'fgrp grow'}, [el('label', null, 'Program'), progSel, progOtherIn]);
+
+  blk.appendChild(el('div', {className:'frow'}, [
+    el('div', {className:'fgrp grow'}, [el('label', null, 'Account'), acctSel]),
+    progGrp,
+  ]));
+
+  // Receipt area
+  const receiptArea = el('div');
+  receiptArea.appendChild(buildReceiptArea(ln));
+  blk.appendChild(receiptArea);
+
+  // Remove line
+  const rmBtn = el('button', {className:'btn btn-rm', style:{marginTop:'6px'}, onClick: () => {
+    item.lines = item.lines.filter(l => l.id !== ln.id);
+    blk.remove();
+    recalc();
+  }}, '✕ Remove line');
+  blk.appendChild(rmBtn);
+
+  return blk;
+}
+
+function buildReceiptArea(ln) {
+  const area = el('div', {className:'receipt-area'});
+  if (ln.hasReceipt) {
+    // List uploaded files
+    ln.receipts.forEach((r, i) => {
+      area.appendChild(el('div', {className:'receipt-file'}, [
+        el('span', {className:'name'}, r.name),
+        el('button', {className:'btn btn-rm', onClick: () => {
+          ln.receipts.splice(i, 1);
+          area.replaceWith(buildReceiptArea(ln));
+        }}, '✕')
+      ]));
+    });
+    // Add button
+    const fileIn = el('input', {type:'file', accept:'.pdf,.jpg,.jpeg,.png', style:{display:'none'}});
+    fileIn.addEventListener('change', async () => {
+      for (const f of fileIn.files) {
+        ln.receipts.push({ name: f.name, type: f.type, data: await f.arrayBuffer() });
+      }
+      area.replaceWith(buildReceiptArea(ln));
+    });
+    area.appendChild(el('button', {className:'btn btn-add', style:{marginTop:'4px'}, onClick: () => fileIn.click()}, '+ Add receipt'));
+    area.appendChild(fileIn);
+  } else {
+    const ta = el('textarea', {placeholder:'Explain why there is no receipt', rows:'2'});
+    ta.value = ln.noReceiptExplanation || '';
+    ta.addEventListener('input', () => { ln.noReceiptExplanation = ta.value; });
+    area.appendChild(el('label', {style:{fontSize:'12px', fontWeight:'600', color:'var(--muted)'}}, 'Explain why there is no receipt:'));
+    area.appendChild(ta);
+  }
+  return area;
+}
+
+// ========== VALIDATION ==========
+function validate() {
+  const errs = [];
+  if (!state.staff.trim()) errs.push('Staff name is required.');
+  if (!state.periodFrom || !state.periodTo) errs.push('Period dates are required.');
+  if (state.items.length === 0) errs.push('Add at least one item.');
+  state.items.forEach((item, ii) => {
+    const idx = ii + 1;
+    if (!item.name.trim()) errs.push(`Item ${idx}: Name is required.`);
+    if (item.lines.length === 0) errs.push(`Item ${idx}: Add at least one line.`);
+    item.lines.forEach((ln, li) => {
+      const lx = `Item ${idx}, line ${li+1}`;
+      if (!ln.date) errs.push(`${lx}: Date is required.`);
+      if (!ln.description.trim()) errs.push(`${lx}: Description is required.`);
+      if (!ln.vendor.trim()) errs.push(`${lx}: Vendor is required.`);
+      const amt = parseFloat(ln.amount);
+      if (isNaN(amt) || amt <= 0) errs.push(`${lx}: Amount must be a positive number.`);
+      if (ln.currency !== CFG['currency-base']) {
+        const rate = parseFloat(ln.fxRate);
+        if (isNaN(rate) || rate <= 0) errs.push(`${lx}: FX rate must be a positive number.`);
+      }
+      if (!ln.account) errs.push(`${lx}: Account is required.`);
+      if (!ln.program) errs.push(`${lx}: Program is required.`);
+      if (ln.program === 'Other' && !ln.programOther.trim()) errs.push(`${lx}: Please specify the program.`);
+      if (ln.hasReceipt && ln.receipts.length === 0) errs.push(`${lx}: Upload at least one receipt, or select "No" for receipt.`);
+      if (!ln.hasReceipt && !ln.noReceiptExplanation.trim()) errs.push(`${lx}: Explain why there is no receipt.`);
+    });
+  });
+  return errs;
+}
+
+// ========== PDF ENGINE ==========
+async function generatePDF() {
+  const { PDFDocument, rgb, StandardFonts } = PDFLib;
+  const doc = await PDFDocument.create();
+  const pageW = CFG['page-size'] === 'letter' ? 612 : 595.28;
+  const pageH = CFG['page-size'] === 'letter' ? 792 : 841.89;
+  const M = { top: 50, bottom: 65, left: 50, right: 50 };
+  const W = pageW - M.left - M.right;
+
+  // Fonts
+  const fontBody = await doc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const fontMono = await doc.embedFont(StandardFonts.Courier);
+  const sz = CFG['font-size'] || 10;
+  const szSm = sz - 1;
+  const szLg = sz + 4;
+  const szXl = sz + 6;
+  const lh = sz + 4; // line height
+
+  // Colors
+  const accent = parseHex(CFG['accent-colour'] || '#1a3a5c');
+  const black = rgb(0.13, 0.13, 0.13);
+  const gray = rgb(0.45, 0.45, 0.45);
+  const lineCol = rgb(0.75, 0.75, 0.75);
+  const baseCur = CFG['currency-base'];
+
+  // Logo
+  let logoImage = null;
+  if (CFG.logo === true || CFG.logo === 'yes') {
+    logoImage = await loadLogo(doc);
+  }
+
+  // State for page tracking
+  const pages = [];
+  let pg, y;
+  const receiptRefs = []; // { pageIdx, x, y, receiptKey }
+
+  function addPage(isFirst) {
+    pg = doc.addPage([pageW, pageH]);
+    pages.push(pg);
+    y = pageH - M.top;
+    if (!isFirst) drawContHeader();
+  }
+
+  function needSpace(h) {
+    if (y - h < M.bottom) { addPage(false); }
+  }
+
+  function drawContHeader() {
+    pg.drawText(state.staff, { x: M.left, y, size: sz, font: fontBold, color: black });
+    const periodStr = `Period: ${state.periodFrom} to ${state.periodTo}`;
+    const pw = fontBody.widthOfTextAtSize(periodStr, sz);
+    pg.drawText(periodStr, { x: M.left + W - pw, y, size: sz, font: fontBody, color: gray });
+    y -= lh + 2;
+    pg.drawLine({ start:{x:M.left, y}, end:{x:M.left+W, y}, thickness:1.5, color:accent });
+    y -= lh;
+  }
+
+  // ---- PAGE 1 ----
+  addPage(true);
+
+  // Logo + title
+  if (logoImage) {
+    const maxW = (CFG['logo-maxwidth'] || 4) * 28.3465;
+    const scale = Math.min(maxW / logoImage.width, 50 / logoImage.height, 1);
+    const lw = logoImage.width * scale, lhh = logoImage.height * scale;
+    pg.drawImage(logoImage, { x: M.left, y: y - lhh + 10, width: lw, height: lhh });
+  } else if (CFG.organization) {
+    pg.drawText(CFG.organization, { x: M.left, y, size: szLg, font: fontBold, color: accent });
+  }
+  const titleStr = 'REIMBURSEMENT FORM';
+  const tw = fontBold.widthOfTextAtSize(titleStr, szLg);
+  pg.drawText(titleStr, { x: M.left + W - tw, y, size: szLg, font: fontBold, color: accent });
+  y -= 28;
+
+  // Intro text
+  if (CFG.intro) {
+    const introLines = wrapText(CFG.intro, fontBody, sz, W);
+    introLines.forEach(line => { pg.drawText(line, {x:M.left, y, size:sz, font:fontBody, color:gray}); y -= lh; });
+    y -= 4;
+  }
+
+  // Staff / Period / Currency
+  const col2 = W * 0.5;
+  const col3 = W * 0.8;
+
+  pg.drawText('Staff', {x:M.left, y, size:szSm, font:fontBold, color:gray}); 
+  pg.drawText('Period', {x:M.left+col2, y, size:szSm, font:fontBold, color:gray});
+  pg.drawText('Currency', {x:M.left+col3, y, size:szSm, font:fontBold, color:gray});
+  y -= lh;
+  pg.drawText(state.staff, {x:M.left, y, size:sz, font:fontBody, color:black});
+  pg.drawText(`${state.periodFrom}  to  ${state.periodTo}`, {x:M.left+col2, y, size:sz, font:fontBody, color:black});
+  pg.drawText(baseCur, {x:M.left+col3, y, size:sz, font:fontBold, color:black});
+  y -= lh + 6;
+
+  // Divider
+  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:1.5, color:accent});
+  y -= lh;
+
+  // Items
+  state.items.forEach(item => {
+    // Item header
+    needSpace(lh * 6); // need room for at least header + one line
+    pg.drawText('ITEM / PROJECT / TRAVEL', {x:M.left, y, size:szSm, font:fontBold, color:accent});
+    const subStr = `Subtotal: ${baseCur} ${fmtAmt(item._subtotal)}`;
+    const subW = fontBold.widthOfTextAtSize(subStr, sz);
+    pg.drawText(subStr, {x:M.left+W-subW, y, size:sz, font:fontBold, color:accent});
+    y -= lh;
+    pg.drawText(item.name, {x:M.left, y, size:sz, font:fontBody, color:black});
+    y -= lh + 4;
+
+    // Lines
+    item.lines.forEach(ln => {
+      needSpace(lh * 5);
+      const c1=0, c2=W*0.18, c3=W*0.6, c4=W*0.78;
+      const r2v=0, r2r=W*0.6, r2a=W*0.78;
+
+      // Row 1 labels
+      pg.drawText('Date', {x:M.left+c1, y, size:szSm-1, font:fontBold, color:gray});
+      pg.drawText('Description', {x:M.left+c2, y, size:szSm-1, font:fontBold, color:gray});
+      pg.drawText('Currency', {x:M.left+c3, y, size:szSm-1, font:fontBold, color:gray});
+      pg.drawText('FX rate', {x:M.left+c4, y, size:szSm-1, font:fontBold, color:gray});
+      y -= lh;
+      // Row 1 values
+      pg.drawText(ln.date || '–', {x:M.left+c1, y, size:sz, font:fontBody, color:black});
+      pg.drawText(truncate(ln.description, fontBody, sz, (c3-c2)-8), {x:M.left+c2, y, size:sz, font:fontBody, color:black});
+      pg.drawText(ln.currency, {x:M.left+c3, y, size:sz, font:fontBody, color:black});
+      const fxStr = ln.currency === baseCur ? '–' : parseFloat(ln.fxRate).toFixed(5);
+      pg.drawText(fxStr, {x:M.left+c4, y, size:sz, font:fontMono, color:black});
+      y -= lh + 2;
+
+      // Row 2 labels
+      pg.drawText('Vendor', {x:M.left+r2v, y, size:szSm-1, font:fontBold, color:gray});
+      pg.drawText('Receipt', {x:M.left+r2r, y, size:szSm-1, font:fontBold, color:gray});
+      pg.drawText('Amount', {x:M.left+r2a, y, size:szSm-1, font:fontBold, color:gray});
+      y -= lh;
+      // Row 2 values
+      pg.drawText(truncate(ln.vendor, fontBody, sz, (r2r-r2v)-8), {x:M.left+r2v, y, size:sz, font:fontBody, color:black});
+      pg.drawText(ln.hasReceipt ? 'Yes' : 'No', {x:M.left+r2r, y, size:sz, font:fontBody, color:black});
+      const amtStr = `${ln.currency} ${fmtAmt(ln.amount)}`;
+      const amtW = fontMono.widthOfTextAtSize(amtStr, sz);
+      pg.drawText(amtStr, {x:M.left+W-amtW, y, size:sz, font:fontMono, color:black});
+      y -= lh + 2;
+
+      // Row 3 labels
+      pg.drawText('Account', {x:M.left, y, size:szSm-1, font:fontBold, color:gray});
+      pg.drawText('Program', {x:M.left+W*0.5, y, size:szSm-1, font:fontBold, color:gray});
+      y -= lh;
+      pg.drawText(ln.account || '–', {x:M.left, y, size:sz, font:fontBody, color:black});
+      const progStr = ln.program === 'Other' ? `Other: ${ln.programOther}` : (ln.program || '–');
+      pg.drawText(progStr, {x:M.left+W*0.5, y, size:sz, font:fontBody, color:black});
+      y -= lh;
+
+      // Receipt reference or explanation
+      if (ln.hasReceipt && ln.receipts.length > 0) {
+        ln.receipts.forEach((r, ri) => {
+          const key = `${ln.id}-${ri}`;
+          const refX = M.left + W * 0.6;
+          receiptRefs.push({ pageIdx: pages.length - 1, x: refX, y, key });
+          y -= lh;
+        });
+      } else if (!ln.hasReceipt) {
+        needSpace(lh * 2);
+        pg.drawText('Explanation:', {x:M.left, y, size:szSm, font:fontBold, color:gray});
+        y -= lh;
+        const explLines = wrapText(ln.noReceiptExplanation || '–', fontBody, sz, W);
+        explLines.forEach(line => {
+          needSpace(lh);
+          pg.drawText(line, {x:M.left, y, size:sz, font:fontBody, color:black});
+          y -= lh;
+        });
+      }
+      y -= 4;
+      // Light divider between lines
+      pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.3, color:lineCol});
+      y -= 8;
+    });
+
+    // Item divider
+    pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:1, color:accent});
+    y -= lh;
+  });
+
+  // Grand total
+  needSpace(lh * 2);
+  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:1.5, color:accent});
+  y -= 4;
+  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:1.5, color:accent});
+  y -= lh;
+  const gtStr = `Total reimbursement claim: ${baseCur} ${fmtAmt(state._grandTotal)}`;
+  const gtW = fontBold.widthOfTextAtSize(gtStr, sz + 2);
+  pg.drawText(gtStr, {x: M.left + W - gtW, y, size: sz+2, font: fontBold, color: accent});
+
+  // ---- RECEIPT PAGES ----
+  const formPageCount = pages.length;
+  const receiptPageMap = {}; // key -> page number
+
+  for (const item of state.items) {
+    for (const ln of item.lines) {
+      if (!ln.hasReceipt) continue;
+      for (let ri = 0; ri < ln.receipts.length; ri++) {
+        const r = ln.receipts[ri];
+        const key = `${ln.id}-${ri}`;
+        const startPage = pages.length + 1; // 1-based
+
+        if (r.type === 'application/pdf') {
+          try {
+            const srcDoc = await PDFDocument.load(r.data);
+            const srcPages = await doc.copyPages(srcDoc, srcDoc.getPageIndices());
+            srcPages.forEach(p => { doc.addPage(p); pages.push(p); });
+          } catch (e) {
+            // Failed to merge PDF — add error page
+            const ep = doc.addPage([pageW, pageH]);
+            pages.push(ep);
+            ep.drawText(`Could not embed: ${r.name}`, {x:M.left, y:pageH-M.top, size:sz, font:fontBody, color:rgb(0.8,0,0)});
+            ep.drawText(String(e.message || e), {x:M.left, y:pageH-M.top-lh, size:szSm, font:fontBody, color:gray});
+          }
+        } else {
+          // Image
+          const rp = doc.addPage([pageW, pageH]);
+          pages.push(rp);
+          try {
+            let img;
+            if (r.type === 'image/png') img = await doc.embedPng(r.data);
+            else img = await doc.embedJpg(r.data);
+            const maxW2 = pageW - M.left - M.right;
+            const maxH2 = pageH - M.top - M.bottom;
+            const sc = Math.min(maxW2 / img.width, maxH2 / img.height, 1);
+            const iw = img.width * sc, ih = img.height * sc;
+            const ix = M.left + (maxW2 - iw) / 2;
+            const iy = M.bottom + (maxH2 - ih) / 2;
+            rp.drawImage(img, {x:ix, y:iy, width:iw, height:ih});
+          } catch (e) {
+            rp.drawText(`Could not embed: ${r.name}`, {x:M.left, y:pageH-M.top, size:sz, font:fontBody, color:rgb(0.8,0,0)});
+          }
+        }
+        receiptPageMap[key] = startPage;
+      }
+    }
+  }
+
+  // ---- FILL IN RECEIPT REFERENCES ----
+  receiptRefs.forEach(ref => {
+    const pageNum = receiptPageMap[ref.key];
+    if (pageNum != null) {
+      const pg2 = pages[ref.pageIdx];
+      pg2.drawText(`See page ${pageNum} for receipt`, {x:ref.x, y:ref.y, size:szSm, font:fontBody, color:gray});
+    }
+  });
+
+  // ---- FOOTERS ----
+  const totalPages = pages.length;
+  const now = new Date();
+  const printed = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+  pages.forEach((p, i) => {
+    const fy = M.bottom - 30;
+    p.drawLine({start:{x:M.left, y:fy+18}, end:{x:M.left+W, y:fy+18}, thickness:0.5, color:lineCol});
+    const footLeft = CFG.footer || 'Reimbursement form';
+    p.drawText(footLeft, {x:M.left, y:fy, size:szSm-1, font:fontBody, color:gray});
+    const pgStr = `Page ${i+1}/${totalPages}`;
+    const pgW2 = fontBody.widthOfTextAtSize(pgStr, szSm-1);
+    p.drawText(pgStr, {x:M.left+W-pgW2, y:fy, size:szSm-1, font:fontBody, color:gray});
+    const prStr = `Printed: ${printed}`;
+    const prW = fontBody.widthOfTextAtSize(prStr, szSm-1);
+    p.drawText(prStr, {x:M.left+W-prW, y:fy-lh+2, size:szSm-1, font:fontBody, color:gray});
+  });
+
+  // ---- SAVE ----
+  const pdfBytes = await doc.save();
+  const blob = new Blob([pdfBytes], {type:'application/pdf'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const fname = `reimbursement_${state.staff.replace(/\s+/g,'_')}_${state.periodFrom}_${state.periodTo}.pdf`;
+  a.download = fname;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// PDF helpers
+function parseHex(hex) {
+  const h = hex.replace('#','');
+  return PDFLib.rgb(parseInt(h.slice(0,2),16)/255, parseInt(h.slice(2,4),16)/255, parseInt(h.slice(4,6),16)/255);
+}
+
+function wrapText(text, font, size, maxW) {
+  const words = text.split(/\s+/);
+  const lines = [];
+  let cur = '';
+  words.forEach(w => {
+    const test = cur ? cur + ' ' + w : w;
+    if (font.widthOfTextAtSize(test, size) > maxW) {
+      if (cur) lines.push(cur);
+      cur = w;
+    } else {
+      cur = test;
+    }
+  });
+  if (cur) lines.push(cur);
+  return lines.length ? lines : [''];
+}
+
+function truncate(text, font, size, maxW) {
+  if (!text) return '–';
+  if (font.widthOfTextAtSize(text, size) <= maxW) return text;
+  let t = text;
+  while (t.length > 1 && font.widthOfTextAtSize(t + '…', size) > maxW) t = t.slice(0, -1);
+  return t + '…';
+}
+
+async function loadLogo(doc) {
+  for (const ext of ['png','jpg']) {
+    try {
+      const res = await fetch(`assets/logo.${ext}`);
+      if (!res.ok) continue;
+      const buf = await res.arrayBuffer();
+      return ext === 'png' ? await doc.embedPng(buf) : await doc.embedJpg(buf);
+    } catch(e) { continue; }
+  }
+  return null;
+}
+
+// ========== GENERATE HANDLER ==========
+async function onGenerate() {
+  const valBox = $('#val-box');
+  valBox.innerHTML = '';
+  const errs = validate();
+  if (errs.length) {
+    const box = el('div', {className:'val-summary'});
+    box.innerHTML = '<strong>Please fix the following:</strong><br>' + errs.join('<br>');
+    valBox.appendChild(box);
+    valBox.scrollIntoView({behavior:'smooth'});
+    return;
+  }
+  const btn = $('#gen-btn');
+  btn.disabled = true;
+  btn.textContent = 'Generating PDF…';
+  try {
+    await generatePDF();
+  } catch (e) {
+    alert('Error generating PDF: ' + e.message);
+    console.error(e);
+  }
+  btn.disabled = false;
+  btn.textContent = 'Generate Reimbursement Form';
+}
+
+// ========== INIT ==========
+async function init() {
+  try {
+    await loadConfig();
+    state.items.push(newItem());
+    render();
+  } catch (e) {
+    $('#app').innerHTML = `<div class="wrap"><p style="color:var(--err)">Failed to load: ${e.message}</p></div>`;
+    console.error(e);
+  }
+}
+
+init();
+})();
+</script>
+</body>
+</html>
