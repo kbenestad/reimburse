@@ -131,12 +131,7 @@ function defaultPeriod() {
 }
 
 // ========== DATE FORMATTING ==========
-function formatDate(iso) {
-  if (!iso) return '';
-  const [y, m, d] = iso.split('-');
-  if (!y || !m || !d) return iso;
-  return (CFG['date-format'] || 'YYYY-MM-DD').replace('YYYY', y).replace('MM', m).replace('DD', d);
-}
+
 
 // ========== CONFIG ==========
 let CFG;
@@ -557,7 +552,7 @@ async function generatePDF() {
 
   function drawContHeader() {
     pg.drawText(state.staff, { x: M.left, y, size: sz, font: fontBold, color: black });
-    const periodStr = `Period: ${formatDate(state.periodFrom)} to ${formatDate(state.periodTo)}`;
+    const periodStr = `Period: ${state.periodFrom} to ${state.periodTo}`;
     const pw = fontBody.widthOfTextAtSize(periodStr, sz);
     pg.drawText(periodStr, { x: M.left + W - pw, y, size: sz, font: fontBody, color: gray });
     y -= lh + 2;
@@ -598,7 +593,7 @@ async function generatePDF() {
   pg.drawText('Currency', {x:M.left+col3, y, size:szSm-1, font:fontBold, color:gray});
   y -= lh;
   pg.drawText(state.staff, {x:M.left, y, size:sz, font:fontBody, color:black});
-  pg.drawText(`${formatDate(state.periodFrom)}  to  ${formatDate(state.periodTo)}`, {x:M.left+col2, y, size:sz, font:fontBody, color:black});
+  pg.drawText(`${state.periodFrom}  to  ${state.periodTo}`, {x:M.left+col2, y, size:sz, font:fontBody, color:black});
   pg.drawText(baseCur, {x:M.left+col3, y, size:sz, font:fontBold, color:black});
   y -= lh + 6;
 
@@ -636,7 +631,7 @@ async function generatePDF() {
       pg.drawText('FX rate', {x:M.left+c4, y, size:szSm-1, font:fontBold, color:gray});
       y -= lh;
       // Row 1 values
-      pg.drawText(formatDate(ln.date) || '–', {x:M.left+c1, y, size:sz, font:fontBody, color:black});
+      pg.drawText(ln.date || '–', {x:M.left+c1, y, size:sz, font:fontBody, color:black});
       pg.drawText(truncate(ln.vendor, fontBody, sz, (c3-c2)-8), {x:M.left+c2, y, size:sz, font:fontBody, color:black});
       pg.drawText(ln.currency, {x:M.left+c3, y, size:sz, font:fontBody, color:black});
       const fxStr = ln.currency === baseCur ? '–' : parseFloat(ln.fxRate).toFixed(5);
