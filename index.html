@@ -656,7 +656,8 @@ async function generatePDF() {
       pg.drawText(truncate(ln.vendor, fontBody, sz, (c3-c2)-8), {x:M.left+c2, y, size:sz, font:fontBody, color:black});
       pg.drawText(ln.currency, {x:M.left+c3, y, size:sz, font:fontBody, color:black});
       const fxStr = ln.currency === baseCur ? '–' : parseFloat(ln.fxRate).toFixed(5);
-      pg.drawText(fxStr, {x:M.left+c4, y, size:sz, font:fontMono, color:black});
+      const fxW = fontBody.widthOfTextAtSize(fxStr, sz);
+      pg.drawText(fxStr, {x:M.left+W-fxW, y, size:sz, font:fontBody, color:black});
       y -= lh + 2;
 
       // Row 2 labels
@@ -668,8 +669,8 @@ async function generatePDF() {
       pg.drawText(truncate(ln.description, fontBody, sz, (r2r-r2v)-8), {x:M.left+r2v, y, size:sz, font:fontBody, color:black});
       pg.drawText(ln.hasReceipt ? 'Yes' : 'No', {x:M.left+r2r, y, size:sz, font:fontBody, color:black});
       const amtStr = `${ln.currency} ${fmtAmt(ln.amount)}`;
-      const amtW = fontMono.widthOfTextAtSize(amtStr, sz);
-      pg.drawText(amtStr, {x:M.left+W-amtW, y, size:sz, font:fontMono, color:black});
+      const amtW = fontBody.widthOfTextAtSize(amtStr, sz);
+      pg.drawText(amtStr, {x:M.left+W-amtW, y, size:sz, font:fontBody, color:black});
       y -= lh + 2;
 
       // Row 3 labels
