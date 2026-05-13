@@ -779,8 +779,8 @@ async function generatePDF() {
   pages.forEach((p, i) => {
     const fy = M.bottom - 30;
     p.drawLine({start:{x:M.left, y:fy+18}, end:{x:M.left+W, y:fy+18}, thickness:0.5, color:lineCol});
-    const footLeft = CFG.footer || 'Reimbursement form';
-    p.drawText(footLeft, {x:M.left, y:fy, size:szSm-1, font:fontBody, color:gray});
+    p.drawText('Reimbursement form', {x:M.left, y:fy, size:szSm-1, font:fontBody, color:gray});
+    p.drawText(state.staff, {x:M.left, y:fy-lh+2, size:szSm-1, font:fontBody, color:gray});
     const pgStr = `Page ${i+1}/${totalPages}`;
     const pgW2 = fontBody.widthOfTextAtSize(pgStr, szSm-1);
     p.drawText(pgStr, {x:M.left+W-pgW2, y:fy, size:szSm-1, font:fontBody, color:gray});
