@@ -337,12 +337,12 @@ function renderLine(ln, item) {
   const currencies = CFG.currencies || [];
   const baseCur = state.baseCurrency;
 
-  // Row 1: Date, Description, Currency, FX Rate
+  // Row 1: Date, Vendor, Currency, FX Rate
   const dateIn = el('input', {type:'date', value: ln.date, style:{width:'140px'}});
   dateIn.addEventListener('change', () => { ln.date = dateIn.value; });
 
-  const descIn = el('input', {type:'text', value: ln.description, placeholder:'Description'});
-  descIn.addEventListener('input', () => { ln.description = descIn.value; });
+  const vendIn = el('input', {type:'text', value: ln.vendor, placeholder:'Vendor name'});
+  vendIn.addEventListener('input', () => { ln.vendor = vendIn.value; });
 
   const curDD = makeCDD(currencies, ln.currency, code => {
     ln.currency = code;
@@ -360,14 +360,14 @@ function renderLine(ln, item) {
 
   blk.appendChild(el('div', {className:'frow'}, [
     el('div', {className:'fgrp'}, [el('label', null, 'Date'), dateIn]),
-    el('div', {className:'fgrp grow'}, [el('label', null, 'Description'), descIn]),
+    el('div', {className:'fgrp grow'}, [el('label', null, 'Vendor'), vendIn]),
     el('div', {className:'fgrp'}, [el('label', null, 'Currency'), curDD]),
     el('div', {className:'fgrp grow'}, [el('label', null, 'FX rate'), fxIn]),
   ]));
 
-  // Row 2: Vendor, Receipt, Amount
-  const vendIn = el('input', {type:'text', value: ln.vendor, placeholder:'Vendor name'});
-  vendIn.addEventListener('input', () => { ln.vendor = vendIn.value; });
+  // Row 2: Description, Receipt, Amount
+  const descIn = el('input', {type:'text', value: ln.description, placeholder:'Description'});
+  descIn.addEventListener('input', () => { ln.description = descIn.value; });
 
   const receiptSel = makeSelect(['Yes','No'], ln.hasReceipt ? 'Yes' : 'No', v => {
     ln.hasReceipt = v === 'Yes';
@@ -379,7 +379,7 @@ function renderLine(ln, item) {
   amtIn.addEventListener('input', () => { ln.amount = amtIn.value; recalc(); });
 
   blk.appendChild(el('div', {className:'frow'}, [
-    el('div', {className:'fgrp grow'}, [el('label', null, 'Vendor'), vendIn]),
+    el('div', {className:'fgrp grow'}, [el('label', null, 'Description'), descIn]),
     el('div', {className:'fgrp'}, [el('label', null, 'Receipt'), receiptSel]),
     el('div', {className:'fgrp'}, [el('label', null, 'Amount'), amtIn]),
   ]));
@@ -602,25 +602,25 @@ async function generatePDF() {
 
       // Row 1 labels
       pg.drawText('Date', {x:M.left+c1, y, size:szSm-1, font:fontBold, color:gray});
-      pg.drawText('Description', {x:M.left+c2, y, size:szSm-1, font:fontBold, color:gray});
+      pg.drawText('Vendor', {x:M.left+c2, y, size:szSm-1, font:fontBold, color:gray});
       pg.drawText('Currency', {x:M.left+c3, y, size:szSm-1, font:fontBold, color:gray});
       pg.drawText('FX rate', {x:M.left+c4, y, size:szSm-1, font:fontBold, color:gray});
       y -= lh;
       // Row 1 values
       pg.drawText(ln.date || '–', {x:M.left+c1, y, size:sz, font:fontBody, color:black});
-      pg.drawText(truncate(ln.description, fontBody, sz, (c3-c2)-8), {x:M.left+c2, y, size:sz, font:fontBody, color:black});
+      pg.drawText(truncate(ln.vendor, fontBody, sz, (c3-c2)-8), {x:M.left+c2, y, size:sz, font:fontBody, color:black});
       pg.drawText(ln.currency, {x:M.left+c3, y, size:sz, font:fontBody, color:black});
       const fxStr = ln.currency === baseCur ? '–' : parseFloat(ln.fxRate).toFixed(5);
       pg.drawText(fxStr, {x:M.left+c4, y, size:sz, font:fontMono, color:black});
       y -= lh + 2;
 
       // Row 2 labels
-      pg.drawText('Vendor', {x:M.left+r2v, y, size:szSm-1, font:fontBold, color:gray});
+      pg.drawText('Description', {x:M.left+r2v, y, size:szSm-1, font:fontBold, color:gray});
       pg.drawText('Receipt', {x:M.left+r2r, y, size:szSm-1, font:fontBold, color:gray});
       pg.drawText('Amount', {x:M.left+r2a, y, size:szSm-1, font:fontBold, color:gray});
       y -= lh;
       // Row 2 values
-      pg.drawText(truncate(ln.vendor, fontBody, sz, (r2r-r2v)-8), {x:M.left+r2v, y, size:sz, font:fontBody, color:black});
+      pg.drawText(truncate(ln.description, fontBody, sz, (r2r-r2v)-8), {x:M.left+r2v, y, size:sz, font:fontBody, color:black});
       pg.drawText(ln.hasReceipt ? 'Yes' : 'No', {x:M.left+r2r, y, size:sz, font:fontBody, color:black});
       const amtStr = `${ln.currency} ${fmtAmt(ln.amount)}`;
       const amtW = fontMono.widthOfTextAtSize(amtStr, sz);
