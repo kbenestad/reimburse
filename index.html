@@ -609,9 +609,9 @@ async function generatePDF() {
   const col2 = W * 0.5;
   const col3 = W * 0.8;
 
-  pg.drawText('Staff', {x:M.left, y, size:szSm, font:fontBold, color:gray}); 
-  pg.drawText('Period', {x:M.left+col2, y, size:szSm, font:fontBold, color:gray});
-  pg.drawText('Currency', {x:M.left+col3, y, size:szSm, font:fontBold, color:gray});
+  pg.drawText('Staff', {x:M.left, y, size:szSm-1, font:fontBold, color:gray});
+  pg.drawText('Period', {x:M.left+col2, y, size:szSm-1, font:fontBold, color:gray});
+  pg.drawText('Currency', {x:M.left+col3, y, size:szSm-1, font:fontBold, color:gray});
   y -= lh;
   pg.drawText(state.staff, {x:M.left, y, size:sz, font:fontBody, color:black});
   pg.drawText(`${formatDate(state.periodFrom)}  to  ${formatDate(state.periodTo)}`, {x:M.left+col2, y, size:sz, font:fontBody, color:black});
@@ -692,7 +692,7 @@ async function generatePDF() {
         });
       } else if (!ln.hasReceipt) {
         needSpace(lh * 2);
-        pg.drawText('Explanation:', {x:M.left, y, size:szSm, font:fontBold, color:gray});
+        pg.drawText('Explanation:', {x:M.left, y, size:szSm-1, font:fontBold, color:gray});
         y -= lh;
         const explLines = wrapText(ln.noReceiptExplanation || '–', fontBody, sz, W);
         explLines.forEach(line => {
