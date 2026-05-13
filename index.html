@@ -377,10 +377,11 @@ function renderLine(ln, item) {
   blk.appendChild(el('div', {className:'frow'}, [
     el('div', {className:'fgrp'}, [el('label', null, 'Date'), dateIn]),
     el('div', {className:'fgrp grow'}, [el('label', null, 'Vendor'), vendIn]),
+    el('div', {className:'fgrp'}, [el('label', null, 'Currency'), curDD]),
     el('div', {className:'fgrp'}, [el('label', null, 'FX rate'), fxIn]),
   ]));
 
-  // Row 2: Description, Currency, Receipt, Amount
+  // Row 2: Description, Receipt, Amount
   const descIn = el('input', {type:'text', value: ln.description, placeholder:'Description'});
   descIn.addEventListener('input', () => { ln.description = descIn.value; });
 
@@ -395,7 +396,6 @@ function renderLine(ln, item) {
 
   blk.appendChild(el('div', {className:'frow'}, [
     el('div', {className:'fgrp grow'}, [el('label', null, 'Description'), descIn]),
-    el('div', {className:'fgrp'}, [el('label', null, 'Currency'), curDD]),
     el('div', {className:'fgrp'}, [el('label', null, 'Receipt'), receiptSel]),
     el('div', {className:'fgrp'}, [el('label', null, 'Amount'), amtIn]),
   ]));
@@ -621,32 +621,31 @@ async function generatePDF() {
         pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.3, color:lineCol});
         y -= 8;
       }
-      const c1=0, c2=W*0.22;
-      const r2cur=W*0.55, r2r=W*0.68, r2a=W*0.82;
+      const c1=0, c2=W*0.22, c3=W*0.68, c4=W*0.82;
 
-      // Row 1 labels: Date | Vendor | FX rate
+      // Row 1 labels: Date | Vendor | Currency | FX rate
       pg.drawText('Date', {x:M.left+c1, y, size:szSm-1, font:fontBold, color:gray});
       pg.drawText('Vendor', {x:M.left+c2, y, size:szSm-1, font:fontBold, color:gray});
-      pg.drawText('FX rate', {x:M.left+r2a, y, size:szSm-1, font:fontBold, color:gray});
+      pg.drawText('Currency', {x:M.left+c3, y, size:szSm-1, font:fontBold, color:gray});
+      pg.drawText('FX rate', {x:M.left+c4, y, size:szSm-1, font:fontBold, color:gray});
       y -= lh;
       // Row 1 values
       pg.drawText(ln.date || '–', {x:M.left+c1, y, size:sz, font:fontBody, color:black});
-      pg.drawText(truncate(ln.vendor, fontBody, sz, (r2cur-c2)-8), {x:M.left+c2, y, size:sz, font:fontBody, color:black});
+      pg.drawText(truncate(ln.vendor, fontBody, sz, (c3-c2)-8), {x:M.left+c2, y, size:sz, font:fontBody, color:black});
+      pg.drawText(ln.currency, {x:M.left+c3, y, size:sz, font:fontBody, color:black});
       const fxStr = ln.currency === baseCur ? '–' : parseFloat(ln.fxRate).toFixed(5);
       const fxW = fontBody.widthOfTextAtSize(fxStr, sz);
       pg.drawText(fxStr, {x:M.left+W-fxW, y, size:sz, font:fontBody, color:black});
       y -= lh + 2;
 
-      // Row 2 labels: Description | Currency | Receipt | Amount
+      // Row 2 labels: Description | Receipt | Amount
       pg.drawText('Description', {x:M.left, y, size:szSm-1, font:fontBold, color:gray});
-      pg.drawText('Currency', {x:M.left+r2cur, y, size:szSm-1, font:fontBold, color:gray});
-      pg.drawText('Receipt', {x:M.left+r2r, y, size:szSm-1, font:fontBold, color:gray});
-      pg.drawText('Amount', {x:M.left+r2a, y, size:szSm-1, font:fontBold, color:gray});
+      pg.drawText('Receipt', {x:M.left+c3, y, size:szSm-1, font:fontBold, color:gray});
+      pg.drawText('Amount', {x:M.left+c4, y, size:szSm-1, font:fontBold, color:gray});
       y -= lh;
       // Row 2 values
-      pg.drawText(truncate(ln.description, fontBody, sz, (r2cur)-8), {x:M.left, y, size:sz, font:fontBody, color:black});
-      pg.drawText(ln.currency, {x:M.left+r2cur, y, size:sz, font:fontBody, color:black});
-      pg.drawText(ln.hasReceipt ? 'Yes' : 'No', {x:M.left+r2r, y, size:sz, font:fontBody, color:black});
+      pg.drawText(truncate(ln.description, fontBody, sz, (c3)-8), {x:M.left, y, size:sz, font:fontBody, color:black});
+      pg.drawText(ln.hasReceipt ? 'Yes' : 'No', {x:M.left+c3, y, size:sz, font:fontBody, color:black});
       const amtStr = `${ln.currency} ${fmtAmt(ln.amount)}`;
       const amtW = fontBody.widthOfTextAtSize(amtStr, sz);
       pg.drawText(amtStr, {x:M.left+W-amtW, y, size:sz, font:fontBody, color:black});
