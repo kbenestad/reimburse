@@ -137,21 +137,6 @@ function formatDate(iso) {
   if (!y || !m || !d) return iso;
   return (CFG['date-format'] || 'YYYY-MM-DD').replace('YYYY', y).replace('MM', m).replace('DD', d);
 }
-function parseDate(str) {
-  if (!str) return '';
-  const fmt = CFG['date-format'] || 'YYYY-MM-DD';
-  const sep = fmt.match(/[^YMD]/)?.[0] || '-';
-  const parts = str.split(sep);
-  const fmtParts = fmt.split(sep);
-  let y = '', m = '', d = '';
-  fmtParts.forEach((f, i) => {
-    if (f === 'YYYY') y = parts[i] || '';
-    else if (f === 'MM') m = (parts[i] || '').padStart(2, '0');
-    else if (f === 'DD') d = (parts[i] || '').padStart(2, '0');
-  });
-  if (!y || !m || !d) return '';
-  return `${y}-${m}-${d}`;
-}
 
 // ========== CONFIG ==========
 let CFG;
@@ -264,11 +249,10 @@ function render() {
   const staffInput = el('input', {type:'text', value: state.staff, placeholder:'Full name'});
   staffInput.addEventListener('input', () => { state.staff = staffInput.value; localStorage.setItem('reimb-staff', staffInput.value); });
 
-  const dateFmt = CFG['date-format'] || 'YYYY-MM-DD';
-  const fromInput = el('input', {type:'text', value: formatDate(state.periodFrom), placeholder: dateFmt, style:{width:'120px'}});
-  fromInput.addEventListener('change', () => { state.periodFrom = parseDate(fromInput.value); });
-  const toInput = el('input', {type:'text', value: formatDate(state.periodTo), placeholder: dateFmt, style:{width:'120px'}});
-  toInput.addEventListener('change', () => { state.periodTo = parseDate(toInput.value); });
+  const fromInput = el('input', {type:'date', value: state.periodFrom});
+  fromInput.addEventListener('change', () => { state.periodFrom = fromInput.value; });
+  const toInput = el('input', {type:'date', value: state.periodTo});
+  toInput.addEventListener('change', () => { state.periodTo = toInput.value; });
 
   const baseCurDD = makeCDD(CFG.currencies || [], state.baseCurrency, code => {
     state.baseCurrency = code;
@@ -364,8 +348,8 @@ function renderLine(ln, item) {
   const baseCur = state.baseCurrency;
 
   // Row 1: Date, Vendor, Currency, FX Rate
-  const dateIn = el('input', {type:'text', value: formatDate(ln.date), placeholder: CFG['date-format'] || 'YYYY-MM-DD', style:{width:'120px'}});
-  dateIn.addEventListener('change', () => { ln.date = parseDate(dateIn.value); });
+  const dateIn = el('input', {type:'date', value: ln.date, style:{width:'150px'}});
+  dateIn.addEventListener('change', () => { ln.date = dateIn.value; });
 
   const vendIn = el('input', {type:'text', value: ln.vendor, placeholder:'Vendor name'});
   vendIn.addEventListener('input', () => { ln.vendor = vendIn.value; });
