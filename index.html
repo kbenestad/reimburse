@@ -67,6 +67,8 @@ textarea { resize: vertical; min-height: 48px; width: 100%; }
 
 /* Custom currency dropdown */
 .cdd { position: relative; display: inline-block; }
+.fgrp.grow .cdd { display: block; width: 100%; }
+.fgrp.grow .cdd-trigger { width: 100%; }
 .cdd-trigger { padding: 7px 10px; border: 1px solid var(--border); border-radius: 4px; background: #fff; cursor: pointer; font-size: 14px; font-family: inherit; text-align: left; min-width: 70px; }
 .cdd-trigger:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(26,58,92,.1); }
 .cdd-panel { display: none; position: absolute; top: calc(100% + 2px); left: 0; background: #fff; border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 6px 20px rgba(0,0,0,.14); z-index: 100; min-width: 220px; max-height: 260px; overflow-y: auto; }
@@ -131,27 +133,7 @@ function defaultPeriod() {
 }
 
 // ========== DATE FORMATTING ==========
-function formatDate(iso) {
-  if (!iso) return '';
-  const [y, m, d] = iso.split('-');
-  if (!y || !m || !d) return iso;
-  return (CFG['date-format'] || 'YYYY-MM-DD').replace('YYYY', y).replace('MM', m).replace('DD', d);
-}
-function parseDate(str) {
-  if (!str) return '';
-  const fmt = CFG['date-format'] || 'YYYY-MM-DD';
-  const sep = fmt.match(/[^YMD]/)?.[0] || '-';
-  const parts = str.split(sep);
-  const fmtParts = fmt.split(sep);
-  let y = '', m = '', d = '';
-  fmtParts.forEach((f, i) => {
-    if (f === 'YYYY') y = parts[i] || '';
-    else if (f === 'MM') m = (parts[i] || '').padStart(2, '0');
-    else if (f === 'DD') d = (parts[i] || '').padStart(2, '0');
-  });
-  if (!y || !m || !d) return '';
-  return `${y}-${m}-${d}`;
-}
+
 
 // ========== CONFIG ==========
 let CFG;
@@ -264,11 +246,10 @@ function render() {
   const staffInput = el('input', {type:'text', value: state.staff, placeholder:'Full name'});
   staffInput.addEventListener('input', () => { state.staff = staffInput.value; localStorage.setItem('reimb-staff', staffInput.value); });
 
-  const dateFmt = CFG['date-format'] || 'YYYY-MM-DD';
-  const fromInput = el('input', {type:'text', value: formatDate(state.periodFrom), placeholder: dateFmt, style:{width:'120px'}});
-  fromInput.addEventListener('change', () => { state.periodFrom = parseDate(fromInput.value); });
-  const toInput = el('input', {type:'text', value: formatDate(state.periodTo), placeholder: dateFmt, style:{width:'120px'}});
-  toInput.addEventListener('change', () => { state.periodTo = parseDate(toInput.value); });
+  const fromInput = el('input', {type:'date', value: state.periodFrom});
+  fromInput.addEventListener('change', () => { state.periodFrom = fromInput.value; });
+  const toInput = el('input', {type:'date', value: state.periodTo});
+  toInput.addEventListener('change', () => { state.periodTo = toInput.value; });
 
   const baseCurDD = makeCDD(CFG.currencies || [], state.baseCurrency, code => {
     state.baseCurrency = code;
@@ -284,7 +265,7 @@ function render() {
     el('div', {className:'fgrp grow'}, [el('label', null, 'Staff'), staffInput]),
     el('div', {className:'fgrp'}, [el('label', null, 'Period from'), fromInput]),
     el('div', {className:'fgrp'}, [el('label', null, 'to'), toInput]),
-    el('div', {className:'fgrp'}, [el('label', null, 'Base currency'), baseCurDD]),
+    el('div', {className:'fgrp grow'}, [el('label', null, 'Base currency'), baseCurDD]),
   ]));
 
   wrap.appendChild(el('hr', {className:'divider'}));
@@ -364,8 +345,8 @@ function renderLine(ln, item) {
   const baseCur = state.baseCurrency;
 
   // Row 1: Date, Vendor, Currency, FX Rate
-  const dateIn = el('input', {type:'text', value: formatDate(ln.date), placeholder: CFG['date-format'] || 'YYYY-MM-DD', style:{width:'120px'}});
-  dateIn.addEventListener('change', () => { ln.date = parseDate(dateIn.value); });
+  const dateIn = el('input', {type:'date', value: ln.date, style:{width:'150px'}});
+  dateIn.addEventListener('change', () => { ln.date = dateIn.value; });
 
   const vendIn = el('input', {type:'text', value: ln.vendor, placeholder:'Vendor name'});
   vendIn.addEventListener('input', () => { ln.vendor = vendIn.value; });
@@ -573,7 +554,7 @@ async function generatePDF() {
 
   function drawContHeader() {
     pg.drawText(state.staff, { x: M.left, y, size: sz, font: fontBold, color: black });
-    const periodStr = `Period: ${formatDate(state.periodFrom)} to ${formatDate(state.periodTo)}`;
+    const periodStr = `Period: ${state.periodFrom} to ${state.periodTo}`;
     const pw = fontBody.widthOfTextAtSize(periodStr, sz);
     pg.drawText(periodStr, { x: M.left + W - pw, y, size: sz, font: fontBody, color: gray });
     y -= lh + 2;
@@ -614,7 +595,7 @@ async function generatePDF() {
   pg.drawText('Currency', {x:M.left+col3, y, size:szSm-1, font:fontBold, color:gray});
   y -= lh;
   pg.drawText(state.staff, {x:M.left, y, size:sz, font:fontBody, color:black});
-  pg.drawText(`${formatDate(state.periodFrom)}  to  ${formatDate(state.periodTo)}`, {x:M.left+col2, y, size:sz, font:fontBody, color:black});
+  pg.drawText(`${state.periodFrom}  to  ${state.periodTo}`, {x:M.left+col2, y, size:sz, font:fontBody, color:black});
   pg.drawText(baseCur, {x:M.left+col3, y, size:sz, font:fontBold, color:black});
   y -= lh + 6;
 
@@ -652,7 +633,7 @@ async function generatePDF() {
       pg.drawText('FX rate', {x:M.left+c4, y, size:szSm-1, font:fontBold, color:gray});
       y -= lh;
       // Row 1 values
-      pg.drawText(formatDate(ln.date) || '–', {x:M.left+c1, y, size:sz, font:fontBody, color:black});
+      pg.drawText(ln.date || '–', {x:M.left+c1, y, size:sz, font:fontBody, color:black});
       pg.drawText(truncate(ln.vendor, fontBody, sz, (c3-c2)-8), {x:M.left+c2, y, size:sz, font:fontBody, color:black});
       pg.drawText(ln.currency, {x:M.left+c3, y, size:sz, font:fontBody, color:black});
       const fxStr = ln.currency === baseCur ? '–' : parseFloat(ln.fxRate).toFixed(5);

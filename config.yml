@@ -28,10 +28,6 @@ footer: "Confidential"
 # Base currency (ISO code — must appear in currencies list)
 currency-base: USD
 
-# Date display format (YYYY = year, MM = month, DD = day)
-# Examples: DD/MM/YYYY  |  YYYY-MM-DD  |  MM/DD/YYYY  |  DD.MM.YYYY
-date-format: DD/MM/YYYY
-
 # Available currencies
 currencies:
   - code: USD
