@@ -36,10 +36,11 @@ textarea { resize: vertical; min-height: 48px; width: 100%; }
 
 /* Item block */
 .item-blk { border: 1px solid var(--border); border-radius: 6px; padding: 20px; margin-bottom: 16px; background: #fafbfc; position: relative; }
-.item-hdr { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 4px; }
+.item-hdr { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 2px; }
 .item-hdr label { font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--accent); white-space: nowrap; }
+.item-subtotal-row { display: flex; justify-content: flex-end; margin-bottom: 4px; }
 .item-subtotal { font-weight: 600; font-size: 14px; white-space: nowrap; color: var(--accent); }
-.item-name { flex: 1; }
+.item-name { width: 100%; box-sizing: border-box; }
 
 /* Line block */
 .line-blk { padding: 12px 0; }
@@ -122,12 +123,11 @@ function fmtAmt(n) {
 }
 function defaultPeriod() {
   const d = new Date();
-  const lastDay = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate() === d.getDate();
-  const y = lastDay ? d.getFullYear() : (d.getMonth() === 0 ? d.getFullYear()-1 : d.getFullYear());
-  const m = lastDay ? d.getMonth() : (d.getMonth() === 0 ? 11 : d.getMonth()-1);
-  const from = new Date(y, m, 1);
-  const to = new Date(y, m+1, 0);
-  return { from: from.toISOString().slice(0,10), to: to.toISOString().slice(0,10) };
+  const isLastDay = d.getDate() === new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  const y = isLastDay ? d.getFullYear() : (d.getMonth() === 0 ? d.getFullYear() - 1 : d.getFullYear());
+  const m = isLastDay ? d.getMonth() : (d.getMonth() === 0 ? 11 : d.getMonth() - 1);
+  const fmt = dt => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+  return { from: fmt(new Date(y, m, 1)), to: fmt(new Date(y, m + 1, 0)) };
 }
 
 // ========== CONFIG ==========
@@ -140,12 +140,12 @@ async function loadConfig() {
 }
 
 // ========== STATE ==========
-const state = { staff: '', periodFrom: '', periodTo: '', items: [], _grandTotal: 0 };
+const state = { staff: '', periodFrom: '', periodTo: '', baseCurrency: CFG['currency-base'], fxRateMemory: {}, items: [], _grandTotal: 0 };
 
 function newItem() { return { id: uid(), name: '', lines: [newLine()], _subtotal: 0 }; }
 function newLine() {
   return {
-    id: uid(), date: '', description: '', currency: CFG['currency-base'],
+    id: uid(), date: '', description: '', currency: state.baseCurrency,
     fxRate: '1.00000', vendor: '', hasReceipt: true, receipts: [],
     noReceiptExplanation: '', amount: '', account: '', program: '', programOther: ''
   };
@@ -164,11 +164,11 @@ function recalc() {
     item._subtotal = sub;
     grand += sub;
     const se = $(`#sub-${item.id}`);
-    if (se) se.textContent = `${CFG['currency-base']} ${fmtAmt(sub)}`;
+    if (se) se.textContent = `${state.baseCurrency} ${fmtAmt(sub)}`;
   });
   state._grandTotal = grand;
   const ge = $('#grand-total');
-  if (ge) ge.textContent = `${CFG['currency-base']} ${fmtAmt(grand)}`;
+  if (ge) ge.textContent = `${state.baseCurrency} ${fmtAmt(grand)}`;
 }
 
 // ========== CURRENCY DROPDOWN ==========
@@ -246,13 +246,21 @@ function render() {
   const toInput = el('input', {type:'date', value: state.periodTo});
   toInput.addEventListener('change', () => { state.periodTo = toInput.value; });
 
-  const baseBadge = el('span', {style:{fontWeight:'600', fontSize:'14px', padding:'7px 0'}}, CFG['currency-base']);
+  const baseCurDD = makeCDD(CFG.currencies || [], state.baseCurrency, code => {
+    state.baseCurrency = code;
+    const box = $('#items-box');
+    if (box) {
+      box.innerHTML = '';
+      state.items.forEach(item => box.appendChild(renderItem(item)));
+    }
+    recalc();
+  });
 
   wrap.appendChild(el('div', {className:'frow'}, [
     el('div', {className:'fgrp grow'}, [el('label', null, 'Staff'), staffInput]),
     el('div', {className:'fgrp'}, [el('label', null, 'Period from'), fromInput]),
     el('div', {className:'fgrp'}, [el('label', null, 'to'), toInput]),
-    el('div', {className:'fgrp'}, [el('label', null, 'Base currency'), baseBadge]),
+    el('div', {className:'fgrp'}, [el('label', null, 'Base currency'), baseCurDD]),
   ]));
 
   wrap.appendChild(el('hr', {className:'divider'}));
@@ -274,7 +282,7 @@ function render() {
     addItemBtn,
     el('div', {className:'grand-total'}, [
       'Total reimbursement claim: ',
-      el('span', {id:'grand-total'}, `${CFG['currency-base']} ${fmtAmt(0)}`)
+      el('span', {id:'grand-total'}, `${state.baseCurrency} ${fmtAmt(0)}`)
     ])
   ]));
 
@@ -300,12 +308,14 @@ function renderItem(item) {
 
   blk.appendChild(el('div', {className:'item-hdr'}, [
     el('label', null, 'Item / Project / Travel'),
-    el('span', {className:'item-subtotal'}, [
-      'Subtotal: ', el('span', {id:`sub-${item.id}`}, `${CFG['currency-base']} ${fmtAmt(0)}`)
-    ]),
     rmBtn
   ]));
   blk.appendChild(nameIn);
+  blk.appendChild(el('div', {className:'item-subtotal-row'}, [
+    el('span', {className:'item-subtotal'}, [
+      'Subtotal: ', el('span', {id:`sub-${item.id}`}, `${state.baseCurrency} ${fmtAmt(0)}`)
+    ])
+  ]));
 
   // Lines container
   const linesBox = el('div', {id:`lines-${item.id}`});
@@ -327,39 +337,50 @@ function renderLine(ln, item) {
   const blk = el('div', {className:'line-blk', id:`line-${ln.id}`});
 
   const currencies = CFG.currencies || [];
-  const baseCur = CFG['currency-base'];
+  const baseCur = state.baseCurrency;
 
-  // Row 1: Date, Description, Currency, FX Rate
+  // Row 1: Date, Vendor, Currency, FX Rate
   const dateIn = el('input', {type:'date', value: ln.date, style:{width:'140px'}});
   dateIn.addEventListener('change', () => { ln.date = dateIn.value; });
 
-  const descIn = el('input', {type:'text', value: ln.description, placeholder:'Description'});
-  descIn.addEventListener('input', () => { ln.description = descIn.value; });
+  const vendIn = el('input', {type:'text', value: ln.vendor, placeholder:'Vendor name'});
+  vendIn.addEventListener('input', () => { ln.vendor = vendIn.value; });
 
   const curDD = makeCDD(currencies, ln.currency, code => {
     ln.currency = code;
     fxIn.dataset.tip = `Units of ${code} per 1 ${baseCur}`;
-    if (code === baseCur) { ln.fxRate = '1.00000'; fxIn.value = '1.00000'; fxIn.readOnly = true; }
-    else { fxIn.readOnly = false; if (ln.fxRate === '1.00000') { ln.fxRate = ''; fxIn.value = ''; } }
+    if (code === baseCur) {
+      ln.fxRate = '1.00000'; fxIn.value = '1.00000'; fxIn.readOnly = true;
+    } else {
+      fxIn.readOnly = false;
+      const mem = state.fxRateMemory[code];
+      if (mem) { ln.fxRate = mem; fxIn.value = mem; }
+      else if (ln.fxRate === '1.00000') { ln.fxRate = ''; fxIn.value = ''; }
+    }
     recalc();
   });
 
-  const fxIn = el('input', {type:'text', value: ln.fxRate, style:{width:'100px'}, placeholder:'0.00000'});
+  const fxIn = el('input', {type:'text', value: ln.fxRate, style:{width:'100%'}, placeholder:'0.00000'});
   fxIn.readOnly = ln.currency === baseCur;
   fxIn.className = 'tip';
   fxIn.dataset.tip = `Units of ${ln.currency || '?'} per 1 ${baseCur}`;
-  fxIn.addEventListener('input', () => { ln.fxRate = fxIn.value; recalc(); });
+  fxIn.addEventListener('input', () => {
+    ln.fxRate = fxIn.value;
+    const rate = parseFloat(fxIn.value);
+    if (ln.currency && ln.currency !== baseCur && rate > 0) state.fxRateMemory[ln.currency] = fxIn.value;
+    recalc();
+  });
 
   blk.appendChild(el('div', {className:'frow'}, [
     el('div', {className:'fgrp'}, [el('label', null, 'Date'), dateIn]),
-    el('div', {className:'fgrp grow'}, [el('label', null, 'Description'), descIn]),
+    el('div', {className:'fgrp grow'}, [el('label', null, 'Vendor'), vendIn]),
     el('div', {className:'fgrp'}, [el('label', null, 'Currency'), curDD]),
-    el('div', {className:'fgrp'}, [el('label', null, 'FX rate'), fxIn]),
+    el('div', {className:'fgrp grow'}, [el('label', null, 'FX rate'), fxIn]),
   ]));
 
-  // Row 2: Vendor, Receipt, Amount
-  const vendIn = el('input', {type:'text', value: ln.vendor, placeholder:'Vendor name'});
-  vendIn.addEventListener('input', () => { ln.vendor = vendIn.value; });
+  // Row 2: Description, Receipt, Amount
+  const descIn = el('input', {type:'text', value: ln.description, placeholder:'Description'});
+  descIn.addEventListener('input', () => { ln.description = descIn.value; });
 
   const receiptSel = makeSelect(['Yes','No'], ln.hasReceipt ? 'Yes' : 'No', v => {
     ln.hasReceipt = v === 'Yes';
@@ -371,7 +392,7 @@ function renderLine(ln, item) {
   amtIn.addEventListener('input', () => { ln.amount = amtIn.value; recalc(); });
 
   blk.appendChild(el('div', {className:'frow'}, [
-    el('div', {className:'fgrp grow'}, [el('label', null, 'Vendor'), vendIn]),
+    el('div', {className:'fgrp grow'}, [el('label', null, 'Description'), descIn]),
     el('div', {className:'fgrp'}, [el('label', null, 'Receipt'), receiptSel]),
     el('div', {className:'fgrp'}, [el('label', null, 'Amount'), amtIn]),
   ]));
@@ -461,7 +482,7 @@ function validate() {
       if (!ln.vendor.trim()) errs.push(`${lx}: Vendor is required.`);
       const amt = parseFloat(ln.amount);
       if (isNaN(amt) || amt <= 0) errs.push(`${lx}: Amount must be a positive number.`);
-      if (ln.currency !== CFG['currency-base']) {
+      if (ln.currency !== state.baseCurrency) {
         const rate = parseFloat(ln.fxRate);
         if (isNaN(rate) || rate <= 0) errs.push(`${lx}: FX rate must be a positive number.`);
       }
@@ -499,7 +520,7 @@ async function generatePDF() {
   const black = rgb(0.13, 0.13, 0.13);
   const gray = rgb(0.45, 0.45, 0.45);
   const lineCol = rgb(0.75, 0.75, 0.75);
-  const baseCur = CFG['currency-base'];
+  const baseCur = state.baseCurrency;
 
   // Logo
   let logoImage = null;
@@ -594,25 +615,25 @@ async function generatePDF() {
 
       // Row 1 labels
       pg.drawText('Date', {x:M.left+c1, y, size:szSm-1, font:fontBold, color:gray});
-      pg.drawText('Description', {x:M.left+c2, y, size:szSm-1, font:fontBold, color:gray});
+      pg.drawText('Vendor', {x:M.left+c2, y, size:szSm-1, font:fontBold, color:gray});
       pg.drawText('Currency', {x:M.left+c3, y, size:szSm-1, font:fontBold, color:gray});
       pg.drawText('FX rate', {x:M.left+c4, y, size:szSm-1, font:fontBold, color:gray});
       y -= lh;
       // Row 1 values
       pg.drawText(ln.date || '–', {x:M.left+c1, y, size:sz, font:fontBody, color:black});
-      pg.drawText(truncate(ln.description, fontBody, sz, (c3-c2)-8), {x:M.left+c2, y, size:sz, font:fontBody, color:black});
+      pg.drawText(truncate(ln.vendor, fontBody, sz, (c3-c2)-8), {x:M.left+c2, y, size:sz, font:fontBody, color:black});
       pg.drawText(ln.currency, {x:M.left+c3, y, size:sz, font:fontBody, color:black});
       const fxStr = ln.currency === baseCur ? '–' : parseFloat(ln.fxRate).toFixed(5);
       pg.drawText(fxStr, {x:M.left+c4, y, size:sz, font:fontMono, color:black});
       y -= lh + 2;
 
       // Row 2 labels
-      pg.drawText('Vendor', {x:M.left+r2v, y, size:szSm-1, font:fontBold, color:gray});
+      pg.drawText('Description', {x:M.left+r2v, y, size:szSm-1, font:fontBold, color:gray});
       pg.drawText('Receipt', {x:M.left+r2r, y, size:szSm-1, font:fontBold, color:gray});
       pg.drawText('Amount', {x:M.left+r2a, y, size:szSm-1, font:fontBold, color:gray});
       y -= lh;
       // Row 2 values
-      pg.drawText(truncate(ln.vendor, fontBody, sz, (r2r-r2v)-8), {x:M.left+r2v, y, size:sz, font:fontBody, color:black});
+      pg.drawText(truncate(ln.description, fontBody, sz, (r2r-r2v)-8), {x:M.left+r2v, y, size:sz, font:fontBody, color:black});
       pg.drawText(ln.hasReceipt ? 'Yes' : 'No', {x:M.left+r2r, y, size:sz, font:fontBody, color:black});
       const amtStr = `${ln.currency} ${fmtAmt(ln.amount)}`;
       const amtW = fontMono.widthOfTextAtSize(amtStr, sz);
