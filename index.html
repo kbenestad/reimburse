@@ -557,14 +557,17 @@ async function generatePDF() {
   let pg, y;
   const receiptRefs = []; // { pageIdx, x, y, receiptKey }
 
+  let justBroke = false;
   function addPage(isFirst) {
     pg = doc.addPage([pageW, pageH]);
     pages.push(pg);
     y = pageH - M.top;
+    justBroke = true;
     if (!isFirst) drawContHeader();
   }
 
   function needSpace(h) {
+    justBroke = false;
     if (y - h < M.bottom) { addPage(false); }
   }
 
@@ -606,9 +609,9 @@ async function generatePDF() {
   const col2 = W * 0.5;
   const col3 = W * 0.8;
 
-  pg.drawText('Staff', {x:M.left, y, size:szSm, font:fontBold, color:gray}); 
-  pg.drawText('Period', {x:M.left+col2, y, size:szSm, font:fontBold, color:gray});
-  pg.drawText('Currency', {x:M.left+col3, y, size:szSm, font:fontBold, color:gray});
+  pg.drawText('Staff', {x:M.left, y, size:szSm-1, font:fontBold, color:gray});
+  pg.drawText('Period', {x:M.left+col2, y, size:szSm-1, font:fontBold, color:gray});
+  pg.drawText('Currency', {x:M.left+col3, y, size:szSm-1, font:fontBold, color:gray});
   y -= lh;
   pg.drawText(state.staff, {x:M.left, y, size:sz, font:fontBody, color:black});
   pg.drawText(`${formatDate(state.periodFrom)}  to  ${formatDate(state.periodTo)}`, {x:M.left+col2, y, size:sz, font:fontBody, color:black});
@@ -632,8 +635,13 @@ async function generatePDF() {
     y -= lh + 4;
 
     // Lines
-    item.lines.forEach(ln => {
-      needSpace(lh * 5);
+    item.lines.forEach((ln, li) => {
+      needSpace(lh * 7);
+      if (li > 0 && !justBroke) {
+        y -= 4;
+        pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.3, color:lineCol});
+        y -= 8;
+      }
       const c1=0, c2=W*0.18, c3=W*0.6, c4=W*0.78;
       const r2v=0, r2r=W*0.6, r2a=W*0.78;
 
@@ -648,7 +656,8 @@ async function generatePDF() {
       pg.drawText(truncate(ln.vendor, fontBody, sz, (c3-c2)-8), {x:M.left+c2, y, size:sz, font:fontBody, color:black});
       pg.drawText(ln.currency, {x:M.left+c3, y, size:sz, font:fontBody, color:black});
       const fxStr = ln.currency === baseCur ? '–' : parseFloat(ln.fxRate).toFixed(5);
-      pg.drawText(fxStr, {x:M.left+c4, y, size:sz, font:fontMono, color:black});
+      const fxW = fontBody.widthOfTextAtSize(fxStr, sz);
+      pg.drawText(fxStr, {x:M.left+W-fxW, y, size:sz, font:fontBody, color:black});
       y -= lh + 2;
 
       // Row 2 labels
@@ -660,8 +669,8 @@ async function generatePDF() {
       pg.drawText(truncate(ln.description, fontBody, sz, (r2r-r2v)-8), {x:M.left+r2v, y, size:sz, font:fontBody, color:black});
       pg.drawText(ln.hasReceipt ? 'Yes' : 'No', {x:M.left+r2r, y, size:sz, font:fontBody, color:black});
       const amtStr = `${ln.currency} ${fmtAmt(ln.amount)}`;
-      const amtW = fontMono.widthOfTextAtSize(amtStr, sz);
-      pg.drawText(amtStr, {x:M.left+W-amtW, y, size:sz, font:fontMono, color:black});
+      const amtW = fontBody.widthOfTextAtSize(amtStr, sz);
+      pg.drawText(amtStr, {x:M.left+W-amtW, y, size:sz, font:fontBody, color:black});
       y -= lh + 2;
 
       // Row 3 labels
@@ -683,7 +692,7 @@ async function generatePDF() {
         });
       } else if (!ln.hasReceipt) {
         needSpace(lh * 2);
-        pg.drawText('Explanation:', {x:M.left, y, size:szSm, font:fontBold, color:gray});
+        pg.drawText('Explanation:', {x:M.left, y, size:szSm-1, font:fontBold, color:gray});
         y -= lh;
         const explLines = wrapText(ln.noReceiptExplanation || '–', fontBody, sz, W);
         explLines.forEach(line => {
@@ -692,22 +701,14 @@ async function generatePDF() {
           y -= lh;
         });
       }
-      y -= 4;
-      // Light divider between lines
-      pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.3, color:lineCol});
-      y -= 8;
+      y -= 6;
     });
 
-    // Item divider
-    pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:1, color:accent});
-    y -= lh;
   });
 
   // Grand total
   needSpace(lh * 2);
-  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:1.5, color:accent});
-  y -= 4;
-  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:1.5, color:accent});
+  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:3, color:accent});
   y -= lh;
   const gtStr = `Total reimbursement claim: ${baseCur} ${fmtAmt(state._grandTotal)}`;
   const gtW = fontBold.widthOfTextAtSize(gtStr, sz + 2);
@@ -778,8 +779,8 @@ async function generatePDF() {
   pages.forEach((p, i) => {
     const fy = M.bottom - 30;
     p.drawLine({start:{x:M.left, y:fy+18}, end:{x:M.left+W, y:fy+18}, thickness:0.5, color:lineCol});
-    const footLeft = CFG.footer || 'Reimbursement form';
-    p.drawText(footLeft, {x:M.left, y:fy, size:szSm-1, font:fontBody, color:gray});
+    p.drawText('Reimbursement form', {x:M.left, y:fy, size:szSm-1, font:fontBody, color:gray});
+    p.drawText(state.staff, {x:M.left, y:fy-lh+2, size:szSm-1, font:fontBody, color:gray});
     const pgStr = `Page ${i+1}/${totalPages}`;
     const pgW2 = fontBody.widthOfTextAtSize(pgStr, szSm-1);
     p.drawText(pgStr, {x:M.left+W-pgW2, y:fy, size:szSm-1, font:fontBody, color:gray});
