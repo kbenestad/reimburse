@@ -67,6 +67,8 @@ textarea { resize: vertical; min-height: 48px; width: 100%; }
 
 /* Custom currency dropdown */
 .cdd { position: relative; display: inline-block; }
+.fgrp.grow .cdd { display: block; width: 100%; }
+.fgrp.grow .cdd-trigger { width: 100%; }
 .cdd-trigger { padding: 7px 10px; border: 1px solid var(--border); border-radius: 4px; background: #fff; cursor: pointer; font-size: 14px; font-family: inherit; text-align: left; min-width: 70px; }
 .cdd-trigger:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(26,58,92,.1); }
 .cdd-panel { display: none; position: absolute; top: calc(100% + 2px); left: 0; background: #fff; border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 6px 20px rgba(0,0,0,.14); z-index: 100; min-width: 220px; max-height: 260px; overflow-y: auto; }
@@ -263,7 +265,7 @@ function render() {
     el('div', {className:'fgrp grow'}, [el('label', null, 'Staff'), staffInput]),
     el('div', {className:'fgrp'}, [el('label', null, 'Period from'), fromInput]),
     el('div', {className:'fgrp'}, [el('label', null, 'to'), toInput]),
-    el('div', {className:'fgrp'}, [el('label', null, 'Base currency'), baseCurDD]),
+    el('div', {className:'fgrp grow'}, [el('label', null, 'Base currency'), baseCurDD]),
   ]));
 
   wrap.appendChild(el('hr', {className:'divider'}));
