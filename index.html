@@ -703,16 +703,11 @@ async function generatePDF() {
       y -= 6;
     });
 
-    // Item divider
-    pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:1, color:accent});
-    y -= lh;
   });
 
   // Grand total
   needSpace(lh * 2);
-  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:1.5, color:accent});
-  y -= 4;
-  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:1.5, color:accent});
+  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:3, color:accent});
   y -= lh;
   const gtStr = `Total reimbursement claim: ${baseCur} ${fmtAmt(state._grandTotal)}`;
   const gtW = fontBold.widthOfTextAtSize(gtStr, sz + 2);
