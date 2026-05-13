@@ -39,7 +39,7 @@ textarea { resize: vertical; min-height: 48px; width: 100%; }
 .item-hdr { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 4px; }
 .item-hdr label { font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--accent); white-space: nowrap; }
 .item-subtotal { font-weight: 600; font-size: 14px; white-space: nowrap; color: var(--accent); }
-.item-name { flex: 1; }
+.item-name { width: 100%; box-sizing: border-box; }
 
 /* Line block */
 .line-blk { padding: 12px 0; }
@@ -344,7 +344,7 @@ function renderLine(ln, item) {
     recalc();
   });
 
-  const fxIn = el('input', {type:'text', value: ln.fxRate, style:{width:'100px'}, placeholder:'0.00000'});
+  const fxIn = el('input', {type:'text', value: ln.fxRate, style:{width:'100%'}, placeholder:'0.00000'});
   fxIn.readOnly = ln.currency === baseCur;
   fxIn.className = 'tip';
   fxIn.dataset.tip = `Units of ${ln.currency || '?'} per 1 ${baseCur}`;
@@ -354,7 +354,7 @@ function renderLine(ln, item) {
     el('div', {className:'fgrp'}, [el('label', null, 'Date'), dateIn]),
     el('div', {className:'fgrp grow'}, [el('label', null, 'Description'), descIn]),
     el('div', {className:'fgrp'}, [el('label', null, 'Currency'), curDD]),
-    el('div', {className:'fgrp'}, [el('label', null, 'FX rate'), fxIn]),
+    el('div', {className:'fgrp grow'}, [el('label', null, 'FX rate'), fxIn]),
   ]));
 
   // Row 2: Vendor, Receipt, Amount
