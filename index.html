@@ -557,14 +557,17 @@ async function generatePDF() {
   let pg, y;
   const receiptRefs = []; // { pageIdx, x, y, receiptKey }
 
+  let justBroke = false;
   function addPage(isFirst) {
     pg = doc.addPage([pageW, pageH]);
     pages.push(pg);
     y = pageH - M.top;
+    justBroke = true;
     if (!isFirst) drawContHeader();
   }
 
   function needSpace(h) {
+    justBroke = false;
     if (y - h < M.bottom) { addPage(false); }
   }
 
@@ -632,8 +635,13 @@ async function generatePDF() {
     y -= lh + 4;
 
     // Lines
-    item.lines.forEach(ln => {
-      needSpace(lh * 5);
+    item.lines.forEach((ln, li) => {
+      needSpace(lh * 7);
+      if (li > 0 && !justBroke) {
+        y -= 4;
+        pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.3, color:lineCol});
+        y -= 8;
+      }
       const c1=0, c2=W*0.18, c3=W*0.6, c4=W*0.78;
       const r2v=0, r2r=W*0.6, r2a=W*0.78;
 
@@ -692,10 +700,7 @@ async function generatePDF() {
           y -= lh;
         });
       }
-      y -= 4;
-      // Light divider between lines
-      pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.3, color:lineCol});
-      y -= 8;
+      y -= 6;
     });
 
     // Item divider
