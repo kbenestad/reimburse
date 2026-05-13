@@ -36,8 +36,9 @@ textarea { resize: vertical; min-height: 48px; width: 100%; }
 
 /* Item block */
 .item-blk { border: 1px solid var(--border); border-radius: 6px; padding: 20px; margin-bottom: 16px; background: #fafbfc; position: relative; }
-.item-hdr { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 4px; }
+.item-hdr { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 2px; }
 .item-hdr label { font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--accent); white-space: nowrap; }
+.item-subtotal-row { display: flex; justify-content: flex-end; margin-bottom: 4px; }
 .item-subtotal { font-weight: 600; font-size: 14px; white-space: nowrap; color: var(--accent); }
 .item-name { width: 100%; box-sizing: border-box; }
 
@@ -139,7 +140,7 @@ async function loadConfig() {
 }
 
 // ========== STATE ==========
-const state = { staff: '', periodFrom: '', periodTo: '', baseCurrency: CFG['currency-base'], items: [], _grandTotal: 0 };
+const state = { staff: '', periodFrom: '', periodTo: '', baseCurrency: CFG['currency-base'], fxRateMemory: {}, items: [], _grandTotal: 0 };
 
 function newItem() { return { id: uid(), name: '', lines: [newLine()], _subtotal: 0 }; }
 function newLine() {
@@ -307,12 +308,14 @@ function renderItem(item) {
 
   blk.appendChild(el('div', {className:'item-hdr'}, [
     el('label', null, 'Item / Project / Travel'),
-    el('span', {className:'item-subtotal'}, [
-      'Subtotal: ', el('span', {id:`sub-${item.id}`}, `${state.baseCurrency} ${fmtAmt(0)}`)
-    ]),
     rmBtn
   ]));
   blk.appendChild(nameIn);
+  blk.appendChild(el('div', {className:'item-subtotal-row'}, [
+    el('span', {className:'item-subtotal'}, [
+      'Subtotal: ', el('span', {id:`sub-${item.id}`}, `${state.baseCurrency} ${fmtAmt(0)}`)
+    ])
+  ]));
 
   // Lines container
   const linesBox = el('div', {id:`lines-${item.id}`});
@@ -346,8 +349,14 @@ function renderLine(ln, item) {
   const curDD = makeCDD(currencies, ln.currency, code => {
     ln.currency = code;
     fxIn.dataset.tip = `Units of ${code} per 1 ${baseCur}`;
-    if (code === baseCur) { ln.fxRate = '1.00000'; fxIn.value = '1.00000'; fxIn.readOnly = true; }
-    else { fxIn.readOnly = false; if (ln.fxRate === '1.00000') { ln.fxRate = ''; fxIn.value = ''; } }
+    if (code === baseCur) {
+      ln.fxRate = '1.00000'; fxIn.value = '1.00000'; fxIn.readOnly = true;
+    } else {
+      fxIn.readOnly = false;
+      const mem = state.fxRateMemory[code];
+      if (mem) { ln.fxRate = mem; fxIn.value = mem; }
+      else if (ln.fxRate === '1.00000') { ln.fxRate = ''; fxIn.value = ''; }
+    }
     recalc();
   });
 
@@ -355,7 +364,12 @@ function renderLine(ln, item) {
   fxIn.readOnly = ln.currency === baseCur;
   fxIn.className = 'tip';
   fxIn.dataset.tip = `Units of ${ln.currency || '?'} per 1 ${baseCur}`;
-  fxIn.addEventListener('input', () => { ln.fxRate = fxIn.value; recalc(); });
+  fxIn.addEventListener('input', () => {
+    ln.fxRate = fxIn.value;
+    const rate = parseFloat(fxIn.value);
+    if (ln.currency && ln.currency !== baseCur && rate > 0) state.fxRateMemory[ln.currency] = fxIn.value;
+    recalc();
+  });
 
   blk.appendChild(el('div', {className:'frow'}, [
     el('div', {className:'fgrp'}, [el('label', null, 'Date'), dateIn]),
