@@ -67,8 +67,6 @@ textarea { resize: vertical; min-height: 48px; width: 100%; }
 
 /* Custom currency dropdown */
 .cdd { position: relative; display: inline-block; }
-.fgrp.grow .cdd { display: block; width: 100%; }
-.fgrp.grow .cdd-trigger { width: 100%; }
 .cdd-trigger { padding: 7px 10px; border: 1px solid var(--border); border-radius: 4px; background: #fff; cursor: pointer; font-size: 14px; font-family: inherit; text-align: left; min-width: 70px; }
 .cdd-trigger:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(26,58,92,.1); }
 .cdd-panel { display: none; position: absolute; top: calc(100% + 2px); left: 0; background: #fff; border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 6px 20px rgba(0,0,0,.14); z-index: 100; min-width: 220px; max-height: 260px; overflow-y: auto; }
@@ -265,7 +263,7 @@ function render() {
     el('div', {className:'fgrp grow'}, [el('label', null, 'Staff'), staffInput]),
     el('div', {className:'fgrp'}, [el('label', null, 'Period from'), fromInput]),
     el('div', {className:'fgrp'}, [el('label', null, 'to'), toInput]),
-    el('div', {className:'fgrp grow'}, [el('label', null, 'Base currency'), baseCurDD]),
+    el('div', {className:'fgrp'}, [el('label', null, 'Base currency'), baseCurDD]),
   ]));
 
   wrap.appendChild(el('hr', {className:'divider'}));
@@ -365,7 +363,7 @@ function renderLine(ln, item) {
     recalc();
   });
 
-  const fxIn = el('input', {type:'text', value: ln.fxRate, style:{width:'100%'}, placeholder:'0.00000'});
+  const fxIn = el('input', {type:'text', value: ln.fxRate, style:{width:'120px'}, placeholder:'0.00000'});
   fxIn.readOnly = ln.currency === baseCur;
   fxIn.className = 'tip';
   fxIn.dataset.tip = `Units of ${ln.currency || '?'} per 1 ${baseCur}`;
@@ -379,11 +377,10 @@ function renderLine(ln, item) {
   blk.appendChild(el('div', {className:'frow'}, [
     el('div', {className:'fgrp'}, [el('label', null, 'Date'), dateIn]),
     el('div', {className:'fgrp grow'}, [el('label', null, 'Vendor'), vendIn]),
-    el('div', {className:'fgrp'}, [el('label', null, 'Currency'), curDD]),
-    el('div', {className:'fgrp grow'}, [el('label', null, 'FX rate'), fxIn]),
+    el('div', {className:'fgrp'}, [el('label', null, 'FX rate'), fxIn]),
   ]));
 
-  // Row 2: Description, Receipt, Amount
+  // Row 2: Description, Currency, Receipt, Amount
   const descIn = el('input', {type:'text', value: ln.description, placeholder:'Description'});
   descIn.addEventListener('input', () => { ln.description = descIn.value; });
 
@@ -398,6 +395,7 @@ function renderLine(ln, item) {
 
   blk.appendChild(el('div', {className:'frow'}, [
     el('div', {className:'fgrp grow'}, [el('label', null, 'Description'), descIn]),
+    el('div', {className:'fgrp'}, [el('label', null, 'Currency'), curDD]),
     el('div', {className:'fgrp'}, [el('label', null, 'Receipt'), receiptSel]),
     el('div', {className:'fgrp'}, [el('label', null, 'Amount'), amtIn]),
   ]));
@@ -623,31 +621,31 @@ async function generatePDF() {
         pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.3, color:lineCol});
         y -= 8;
       }
-      const c1=0, c2=W*0.18, c3=W*0.6, c4=W*0.78;
-      const r2v=0, r2r=W*0.6, r2a=W*0.78;
+      const c1=0, c2=W*0.22;
+      const r2cur=W*0.55, r2r=W*0.68, r2a=W*0.82;
 
-      // Row 1 labels
+      // Row 1 labels: Date | Vendor | FX rate
       pg.drawText('Date', {x:M.left+c1, y, size:szSm-1, font:fontBold, color:gray});
       pg.drawText('Vendor', {x:M.left+c2, y, size:szSm-1, font:fontBold, color:gray});
-      pg.drawText('Currency', {x:M.left+c3, y, size:szSm-1, font:fontBold, color:gray});
-      pg.drawText('FX rate', {x:M.left+c4, y, size:szSm-1, font:fontBold, color:gray});
+      pg.drawText('FX rate', {x:M.left+r2a, y, size:szSm-1, font:fontBold, color:gray});
       y -= lh;
       // Row 1 values
       pg.drawText(ln.date || '–', {x:M.left+c1, y, size:sz, font:fontBody, color:black});
-      pg.drawText(truncate(ln.vendor, fontBody, sz, (c3-c2)-8), {x:M.left+c2, y, size:sz, font:fontBody, color:black});
-      pg.drawText(ln.currency, {x:M.left+c3, y, size:sz, font:fontBody, color:black});
+      pg.drawText(truncate(ln.vendor, fontBody, sz, (r2cur-c2)-8), {x:M.left+c2, y, size:sz, font:fontBody, color:black});
       const fxStr = ln.currency === baseCur ? '–' : parseFloat(ln.fxRate).toFixed(5);
       const fxW = fontBody.widthOfTextAtSize(fxStr, sz);
       pg.drawText(fxStr, {x:M.left+W-fxW, y, size:sz, font:fontBody, color:black});
       y -= lh + 2;
 
-      // Row 2 labels
-      pg.drawText('Description', {x:M.left+r2v, y, size:szSm-1, font:fontBold, color:gray});
+      // Row 2 labels: Description | Currency | Receipt | Amount
+      pg.drawText('Description', {x:M.left, y, size:szSm-1, font:fontBold, color:gray});
+      pg.drawText('Currency', {x:M.left+r2cur, y, size:szSm-1, font:fontBold, color:gray});
       pg.drawText('Receipt', {x:M.left+r2r, y, size:szSm-1, font:fontBold, color:gray});
       pg.drawText('Amount', {x:M.left+r2a, y, size:szSm-1, font:fontBold, color:gray});
       y -= lh;
       // Row 2 values
-      pg.drawText(truncate(ln.description, fontBody, sz, (r2r-r2v)-8), {x:M.left+r2v, y, size:sz, font:fontBody, color:black});
+      pg.drawText(truncate(ln.description, fontBody, sz, (r2cur)-8), {x:M.left, y, size:sz, font:fontBody, color:black});
+      pg.drawText(ln.currency, {x:M.left+r2cur, y, size:sz, font:fontBody, color:black});
       pg.drawText(ln.hasReceipt ? 'Yes' : 'No', {x:M.left+r2r, y, size:sz, font:fontBody, color:black});
       const amtStr = `${ln.currency} ${fmtAmt(ln.amount)}`;
       const amtW = fontBody.widthOfTextAtSize(amtStr, sz);
