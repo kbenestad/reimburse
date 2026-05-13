@@ -140,7 +140,7 @@ async function loadConfig() {
 }
 
 // ========== STATE ==========
-const state = { staff: '', periodFrom: '', periodTo: '', baseCurrency: CFG['currency-base'], fxRateMemory: {}, items: [], _grandTotal: 0 };
+const state = { staff: '', periodFrom: '', periodTo: '', baseCurrency: '', fxRateMemory: {}, items: [], _grandTotal: 0 };
 
 function newItem() { return { id: uid(), name: '', lines: [newLine()], _subtotal: 0 }; }
 function newLine() {
@@ -848,6 +848,7 @@ async function onGenerate() {
 async function init() {
   try {
     await loadConfig();
+    state.baseCurrency = CFG['currency-base'];
     state.items.push(newItem());
     render();
   } catch (e) {
