@@ -676,7 +676,7 @@ async function generatePDF() {
         });
       } else if (!ln.hasReceipt) {
         needSpace(lh * 2);
-        pg.drawText('Explanation:', {x:M.left, y, size:szSm-1, font:fontBold, color:gray});
+        pg.drawText('Explanation for no receipt:', {x:M.left, y, size:szSm-1, font:fontBold, color:gray});
         y -= lh;
         const explLines = wrapText(ln.noReceiptExplanation || '–', fontBody, sz, W);
         explLines.forEach(line => {
