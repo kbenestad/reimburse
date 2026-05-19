@@ -564,18 +564,20 @@ async function generatePDF() {
   addPage(true);
 
   // Logo + title
+  let headerBlockH = szLg;
   if (logoImage) {
     const maxW = (CFG['logo-maxwidth'] || 4) * 28.3465;
     const scale = Math.min(maxW / logoImage.width, 50 / logoImage.height, 1);
     const lw = logoImage.width * scale, lhh = logoImage.height * scale;
-    pg.drawImage(logoImage, { x: M.left, y: y - lhh + 10, width: lw, height: lhh });
+    pg.drawImage(logoImage, { x: M.left, y: y - lhh, width: lw, height: lhh });
+    headerBlockH = Math.max(lhh, szLg);
   } else if (CFG.organization) {
     pg.drawText(CFG.organization, { x: M.left, y, size: szLg, font: fontBold, color: accent });
   }
   const titleStr = 'REIMBURSEMENT FORM';
   const tw = fontBold.widthOfTextAtSize(titleStr, szLg);
-  pg.drawText(titleStr, { x: M.left + W - tw, y, size: szLg, font: fontBold, color: accent });
-  y -= 28;
+  pg.drawText(titleStr, { x: M.left + W - tw, y: y - szLg, size: szLg, font: fontBold, color: accent });
+  y -= headerBlockH + 8;
 
   // Intro text
   if (CFG.intro) {
