@@ -1,107 +1,227 @@
-# Reimbursement Form App
+# Reimbursement Form — Agent Reference
 
-Static browser app that collects expense data via a form UI and generates a PDF with attached receipts. No server, no build step — one HTML file + config.yml + assets.
+Static browser app that collects expense data via a form UI and generates a PDF with attached receipts. No server, no build step — one HTML file + config.yml + optional logo.
+
+## Repository layout
+
+```
+.
+├── CLAUDE.md               # This file
+├── README.md
+├── LICENSE
+├── docs/
+│   ├── user-guide.md       # End-user instructions
+│   ├── admin-guide.md      # Deployment and config.yml reference
+│   └── developer-guide.md  # Fork/extend instructions, design notes
+└── app/
+    ├── index.html          # Entire application (~870 lines)
+    ├── config.yml          # Runtime configuration (loaded via fetch at startup)
+    └── assets/
+        └── logo.png        # Optional logo (PNG or JPG)
+```
 
 ## Architecture
 
-```
-reimbursement/
-├── index.html      # Complete app (HTML + CSS + JS, ~850 lines)
-├── config.yml      # All configurable values (parsed at runtime via js-yaml)
-├── assets/
-│   └── logo.png    # Optional org logo
-└── CLAUDE.md
-```
+Single-file app. CSS in `<style>`, JS in `<script>`. No framework, no build tools. Vanilla JS with DOM manipulation (no re-rendering — elements are created once, updated via event listeners). Two CDN dependencies loaded at runtime:
 
-Single-file app. CSS is in `<style>`, JS is in `<script>`. No framework, no build tools. Vanilla JS with DOM manipulation (no re-rendering — elements are created once, updated via event listeners).
+- **pdf-lib** 1.17.1 — PDF creation, image embedding, PDF merging (`unpkg.com`)
+- **js-yaml** 4.1.0 — config.yml parsing (`unpkg.com`)
 
-## Dependencies (CDN, loaded at runtime)
+## Code sections (index.html)
 
-- **pdf-lib** (1.17.1) — PDF creation, image embedding, PDF merging. Loaded from unpkg.
-- **js-yaml** (4.1.0) — config.yml parsing. Loaded from unpkg.
-
-No npm, no node_modules, no bundler.
-
-## Key design decisions
-
-- **Custom currency dropdown** (`makeCDD`): native `<select>` can't show two-line options (code + name) that collapse to code-only. Built as a positioned div with click-outside-to-close.
-- **FX rate direction**: "units of line currency per 1 base currency" (e.g. 32.00000 THB per 1 USD). Conversion: `base_amount = line_amount / fx_rate`. Rate field locks to 1.00000 when line currency = base currency.
-- **Receipt storage**: `File.arrayBuffer()` stored in state. Memory-heavy for many large files but acceptable for typical reimbursement volumes (10-20 receipts).
-- **PDF page references**: two-pass approach. First pass renders form pages and records placeholder positions for "See page X" text. Second pass adds receipt pages, then backfills page numbers at recorded positions. Footers (Page X/Y) added last after total page count is known.
-- **Period auto-fill**: previous month by default; current month if today is the last day of the month.
-- **Staff name**: cached in `localStorage` under key `reimb-staff`.
+| Banner | Approx lines | Contents |
+|---|---|---|
+| `UTILITIES` | 103–131 | `uid()`, `el()`, `fmtAmt()`, `defaultPeriod()` |
+| `CONFIG` | 136–143 | `loadConfig()` — fetches and parses config.yml |
+| `STATE` | 145–155 | `state` object, `newItem()`, `newLine()` |
+| `CALCULATIONS` | 157–175 | `recalc()` |
+| `CURRENCY DROPDOWN` | 177–195 | `makeCDD()` |
+| `SELECT HELPER` | 197–208 | `makeSelect()` |
+| `FORM RENDERING` | 210–469 | `render()`, `renderItem()`, `renderLine()`, `buildReceiptArea()` |
+| `VALIDATION` | 471–500 | `validate()` |
+| `PDF ENGINE` | 502–786 | `generatePDF()` and helpers |
+| `GENERATE HANDLER` | 831–854 | `onGenerate()` |
+| `INIT` | 856–869 | `init()` |
 
 ## State model
 
+```js
+state = {
+  staff: string,           // persisted to localStorage('reimb-staff')
+  periodFrom: string,      // YYYY-MM-DD
+  periodTo: string,        // YYYY-MM-DD
+  baseCurrency: string,    // ISO code; from CFG['currency-base']
+  fxRateMemory: {},        // { [code]: '00.00000' } session cache
+  items: Item[],
+  _grandTotal: number      // computed by recalc()
+}
+
+Item = {
+  id: string,
+  name: string,
+  lines: Line[],
+  _subtotal: number        // computed by recalc()
+}
+
+Line = {
+  id: string,
+  date: string,            // YYYY-MM-DD
+  description: string,
+  currency: string,        // ISO code
+  fxRate: string,          // '0.00000'; units of line currency per 1 base currency
+  vendor: string,
+  hasReceipt: boolean,
+  receipts: Receipt[],
+  noReceiptExplanation: string,
+  amount: string,          // in line currency
+  account: string,         // from CFG.accounts[]
+  program: string,         // from CFG.programs[]
+  programOther: string     // used when program === 'Other'
+}
+
+Receipt = {
+  name: string,
+  type: string,            // 'application/pdf' | 'image/png' | 'image/jpeg'
+  data: ArrayBuffer
+}
 ```
-state.staff         string
-state.periodFrom    string (YYYY-MM-DD)
-state.periodTo      string (YYYY-MM-DD)
-state.items[]
-  .id               string (uid)
-  .name             string
-  ._subtotal        number (calculated, base currency)
-  .lines[]
-    .id             string (uid)
-    .date           string (YYYY-MM-DD)
-    .description    string
-    .currency       string (ISO code)
-    .fxRate         string (5 decimal places)
-    .vendor         string
-    .hasReceipt     boolean
-    .receipts[]     { name, type, data: ArrayBuffer }
-    .noReceiptExplanation  string
-    .amount         string
-    .account        string
-    .program        string
-    .programOther   string
+
+State is mutated directly. After any change that affects totals, call `recalc()` explicitly.
+
+## Config keys — full reference
+
+All config is accessed as `CFG['key']` after `jsyaml.load()`. Keys with hyphens must use bracket notation.
+
+| JS access | YAML key | Type | Default | Notes |
+|---|---|---|---|---|
+| `CFG.organization` | `organization` | string | — | Org name; PDF header and logo fallback |
+| `CFG.logo` | `logo` | `yes`/`no` | — | Checked as `=== true \|\| === 'yes'`; loads `assets/logo.png` then `assets/logo.jpg` |
+| `CFG['logo-maxwidth']` | `logo-maxwidth` | number (cm) | unconstrained | Converted to pt by `× 28.3465` for PDF; applied as `maxWidth` CSS in UI |
+| `CFG['page-size']` | `page-size` | `'A4'`/`'letter'` | `'A4'` | A4: 595.28×841.89 pt; letter: 612×792 pt |
+| `CFG['font-body']` | `font-body` | string | `'Helvetica'` | Parsed but currently unused (hardcoded to StandardFonts) |
+| `CFG['font-heading']` | `font-heading` | string | `'Helvetica'` | Parsed but currently unused |
+| `CFG['font-monospace']` | `font-monospace` | string | `'Courier'` | Parsed but currently unused |
+| `CFG['font-size']` | `font-size` | number (pt) | `10` | PDF base size; `szSm = sz-1`, `szLg = sz+4`, `lh = sz+4` |
+| `CFG['accent-colour']` | `accent-colour` | hex string | `'#1a3a5c'` | Set as CSS `--accent`; converted via `parseHex()` for PDF |
+| `CFG.intro` | `intro` | string | `''` | Rendered on PDF page 1 before header fields; omitted if empty |
+| `CFG.footer` | `footer` | string | `''` | Bottom of every PDF page |
+| `CFG['currency-base']` | `currency-base` | ISO code | — | Initial `state.baseCurrency`; must be in `currencies` list |
+| `CFG.currencies` | `currencies` | `{code, name}[]` | — | Options for per-line currency dropdown |
+| `CFG.accounts` | `accounts` | `string[]` | — | Options for account dropdown; selection required per line |
+| `CFG.programs` | `programs` | `string[]` | — | Options for program dropdown; literal `'Other'` triggers text input |
+
+## Validation rules
+
+`validate()` returns `string[]`. Empty array means valid.
+
+- `state.staff` — required (non-empty after trim)
+- `state.periodFrom`, `state.periodTo` — both required
+- `state.items.length > 0` — at least one item
+- Per item: `name` required; `lines.length > 0`
+- Per line:
+  - `date` — required
+  - `description` — required
+  - `vendor` — required
+  - `amount` — required; must parse as positive float
+  - `fxRate` — required positive float if `currency !== baseCurrency`
+  - `account` — required
+  - `program` — required
+  - if `program === 'Other'`: `programOther` required
+  - if `hasReceipt === true`: `receipts.length > 0`
+  - if `hasReceipt === false`: `noReceiptExplanation` required
+
+## PDF layout
+
+**Coordinate system:** origin bottom-left, Y increases upward.
+
+**Margins:** top 50, bottom 65, left 50, right 50 (pt).
+
+**Usable width:** `W = pageW - 100`.
+
+**Column positions** (inside line blocks):
+```
+c1 = 0          // Date
+c2 = W * 0.22   // Vendor
+c3 = W * 0.68   // Currency, Receipt label
+c4 = W * 0.82   // FX rate, Amount label
+```
+Program: `W * 0.5`. Account: left edge.
+
+**Header columns:** Staff at left, Period at `W * 0.5`, Currency at `W * 0.8`.
+
+**Page break:** `needSpace(h)` checks `y - h < marginBottom`; if so, calls `addPage()` which draws a continuation header (staff name + period + divider).
+
+**Four-pass PDF build:**
+1. Form pages + receipt placeholder recording (`receiptRefs[]`)
+2. Receipt pages — PDF merging and image embedding (`receiptPageMap{}`)
+3. Backfill receipt references ("See page N for receipt")
+4. Footers on all pages (page X/Y, printed timestamp, staff name)
+
+**Downloaded filename:** `reimbursement_[staff]_[from]_[to].pdf` (spaces replaced with `_`).
+
+## FX rate convention
+
+Rate = units of line currency per 1 base currency.
+
+```
+base_amount = line_amount / fxRate
 ```
 
-No reactivity system. State is mutated directly by event listeners; `recalc()` is called explicitly after any change that affects totals.
+Example: 1000 THB at rate 34.25000 → 1000/34.25 = 29.20 USD.
 
-## config.yml schema
+The `fxRate` field is locked to `'1.00000'` (readonly) when `line.currency === state.baseCurrency`. FX rates are cached in `state.fxRateMemory[code]` while the page is open.
 
-| Key | Type | Notes |
-|-----|------|-------|
-| `organization` | string | Shown if logo disabled or missing |
-| `logo` | `yes`/`no` | Loads `assets/logo.png`, falls back to `.jpg` |
-| `logo-maxwidth` | number | cm — applied to both UI and PDF |
-| `page-size` | `A4`/`letter` | PDF output size |
-| `font-body`, `font-heading`, `font-monospace` | string | `Helvetica`/`Times`/`Courier` or `.ttf` path (TTF not yet implemented) |
-| `font-size` | number | Base pt size for PDF |
-| `accent-colour` | hex string | Applied as CSS variable and PDF heading/divider color |
-| `intro` | string | Rendered on PDF above form fields |
-| `footer` | string | Bottom of every PDF page |
-| `currency-base` | string | ISO code, must appear in currencies list |
-| `currencies[]` | `{code, name}` | Populates currency dropdowns |
-| `accounts[]` | string[] | Dropdown options |
-| `programs[]` | string[] | `"Other"` triggers a text field |
+## Key design decisions
 
-## PDF layout (pdf-lib coordinate system)
+**`makeCDD` — custom currency dropdown:** native `<select>` cannot show code+name two-line options that collapse to code-only. Built as a positioned div with click-outside-to-close via a document-level listener.
 
-- Origin: bottom-left. Y increases upward.
-- A4: 595.28 × 841.89 pt. Letter: 612 × 792 pt.
-- Margins: top 50, bottom 65, left 50, right 50.
-- Cursor (`y`) starts at `pageHeight - marginTop`, decrements downward.
-- `needSpace(h)` checks if `y - h < marginBottom`; if so, calls `addPage()` which draws the continuation header.
-- Fonts: StandardFonts only (Helvetica, HelveticaBold, Courier). Custom TTF embedding is stubbed in config but not yet wired.
+**Receipt storage as ArrayBuffer:** files are stored raw in state, ready for pdf-lib without re-reading. Memory is proportional to total file size.
 
-## Common tasks
+**No re-rendering:** DOM is mutated in-place. Exception: `buildReceiptArea()` replaces the receipt area div when file list or toggle changes.
 
-**Add a new form field**: add to `newLine()` defaults → add UI in `renderLine()` → add validation in `validate()` → add PDF rendering in `generatePDF()`.
+**Period auto-fill:** `defaultPeriod()` returns the previous calendar month. Exception: if today is the last day of the month, returns the current month.
 
-**Change PDF layout**: all layout happens in `generatePDF()`. Column positions are defined as proportions of usable width (`W`). Adjust `c1`–`c4` and `r2v`/`r2r`/`r2a` variables.
+**localStorage key:** `reimb-staff` — staff name only; no other state is persisted.
 
-**Add a new config option**: add to `config.yml` → read from `CFG['key-name']` in JS.
+## Common tasks (checklist)
 
-## Deployment
+**Add a field to an expense line:**
+1. `newLine()` — add field with default
+2. `renderLine()` — create DOM, wire event listener, call `recalc()` if it affects amounts
+3. `validate()` — add error if required
+4. `generatePDF()` — render value at appropriate position
 
-Static files served from a web server. No build step. Drop the directory at the target path (e.g. `app.capthailand.org/reimbursement/`). Ensure the server serves `.yml` files with a valid MIME type (Caddy does this by default).
+**Add a config option:**
+1. Add to `config.yml`
+2. Read as `CFG['your-key']` in JS
+3. No other registration needed
+
+**Change PDF column layout:**
+Edit `c1`–`c4` constants inside the `item.lines.forEach` block in `generatePDF()`.
+
+**Implement custom TTF fonts:**
+1. `const bytes = await fetch('assets/Font.ttf').then(r => r.arrayBuffer())`
+2. `const font = await doc.embedFont(bytes)`
+3. Replace `StandardFonts.Helvetica` references with the embedded font
 
 ## Known limitations
 
-- Custom TTF fonts referenced in config are not yet embedded in PDFs (falls back to standard fonts)
-- Password-protected PDF receipts will fail to merge
-- No offline support (CDN dependencies)
-- Large receipt volumes may stress browser memory
-- PDF form layout has fixed column proportions — very long field values get truncated with `…`
+| Limitation | Detail |
+|---|---|
+| Custom fonts not embedded | `font-body`/`font-heading`/`font-monospace` config keys parsed but ignored; hardcoded to Helvetica/Courier |
+| Password-protected PDFs fail | pdf-lib cannot decrypt; error page inserted instead |
+| No offline support | CDN dependencies require network on first load |
+| Large receipts stress memory | All ArrayBuffers held in JS heap |
+| Long text truncated with `…` | Most PDF fields truncate to fit column width; only `intro` and `noReceiptExplanation` wrap |
+
+## Deployment
+
+Static files served from any HTTP server. No build step. Place `app/` at the target path. The server must serve `.yml` files (Caddy does this by default; for Nginx add `text/yaml yml` to `types {}`).
+
+Local development: `python3 -m http.server 8080` from the `app/` directory. Do not open `index.html` via `file://` — `fetch('config.yml')` is blocked on that origin.
+
+## Human-readable docs
+
+- `docs/user-guide.md` — filling in the form (staff audience)
+- `docs/admin-guide.md` — deployment and all config.yml keys (admin audience)
+- `docs/developer-guide.md` — architecture, state, PDF engine, modification patterns (developer audience)
