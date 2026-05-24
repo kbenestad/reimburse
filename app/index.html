@@ -139,6 +139,27 @@ function isDateInPeriod(date) {
   return date >= state.periodFrom && date <= state.periodTo;
 }
 
+function showConfirmModal(msg) {
+  return new Promise(resolve => {
+    const overlay = el('div', {style:{position:'fixed',top:'0',right:'0',bottom:'0',left:'0',background:'rgba(0,0,0,.45)',zIndex:'9999',display:'flex',alignItems:'center',justifyContent:'center'}});
+    const box = el('div', {style:{background:'#fff',borderRadius:'8px',padding:'24px 28px',maxWidth:'400px',width:'90%',boxShadow:'0 8px 32px rgba(0,0,0,.25)'}});
+    const hdr = el('div', {style:{display:'flex',alignItems:'center',gap:'10px',marginBottom:'14px'}});
+    hdr.append(el('span', {style:{fontSize:'20px',color:'#e65100'}}, '⚠'), el('strong', {style:{fontSize:'15px',color:'#e65100'}}, 'Warning'));
+    const body = el('p', {style:{fontSize:'13px',lineHeight:'1.6',color:'var(--text)',marginBottom:'20px'}});
+    body.innerHTML = msg;
+    const footer = el('div', {style:{display:'flex',justifyContent:'flex-end',gap:'10px'}});
+    const cancelBtn = el('button', {className:'btn btn-add', style:{padding:'8px 18px',fontSize:'13px'}}, 'Cancel');
+    const confirmBtn = el('button', {className:'btn btn-gen', style:{width:'auto',padding:'8px 24px',marginTop:'0'}}, 'Yes, start new form');
+    cancelBtn.addEventListener('click', () => { overlay.remove(); resolve(false); });
+    confirmBtn.addEventListener('click', () => { overlay.remove(); resolve(true); });
+    footer.append(cancelBtn, confirmBtn);
+    box.append(hdr, body, footer);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    cancelBtn.focus();
+  });
+}
+
 function showWarningModal(msg) {
   return new Promise(resolve => {
     const overlay = el('div', {style:{position:'fixed',top:'0',right:'0',bottom:'0',left:'0',background:'rgba(0,0,0,.45)',zIndex:'9999',display:'flex',alignItems:'center',justifyContent:'center'}});
@@ -381,9 +402,13 @@ function render() {
   const staffInput = el('input', {type:'text', value: state.staff, placeholder:'Full name'});
   staffInput.addEventListener('input', () => { state.staff = staffInput.value; localStorage.setItem('reimb-staff', staffInput.value); });
 
-  const fromInput = el('input', {type:'date', value: state.periodFrom});
+  const newFormBtn = el('button', {type:'button', className:'btn btn-save', style:{padding:'7px 14px',fontSize:'13px'}, onClick: onNewForm}, 'New Form');
+
+  const fromInput = el('input', {type:'date'});
+  fromInput.value = state.periodFrom;
   fromInput.addEventListener('change', () => { state.periodFrom = fromInput.value; });
-  const toInput = el('input', {type:'date', value: state.periodTo});
+  const toInput = el('input', {type:'date'});
+  toInput.value = state.periodTo;
   toInput.addEventListener('change', () => { state.periodTo = toInput.value; });
 
   const baseCurDD = makeCDD(CFG.currencies || [], state.baseCurrency, code => {
@@ -397,7 +422,7 @@ function render() {
   });
 
   wrap.appendChild(el('div', {className:'frow'}, [
-    el('div', {className:'fgrp grow'}, [el('label', null, 'Staff'), staffInput]),
+    el('div', {className:'fgrp grow'}, [el('label', null, 'Staff'), el('div', {style:{display:'flex',gap:'8px',alignItems:'center'}}, [staffInput, newFormBtn])]),
     el('div', {className:'fgrp'}, [el('label', null, 'Period from'), fromInput]),
     el('div', {className:'fgrp'}, [el('label', null, 'to'), toInput]),
     el('div', {className:'fgrp'}, [el('label', null, 'Base currency'), baseCurDD]),
@@ -1189,6 +1214,27 @@ async function onGenerate() {
   }
   btn.disabled = false;
   btn.textContent = 'Generate Reimbursement Form';
+}
+
+// ========== NEW FORM HANDLER ==========
+async function onNewForm() {
+  const confirmed = await showConfirmModal('This will clear all current form data and start a fresh form.<br><br>Are you sure you want to continue?');
+  if (!confirmed) return;
+  try { localStorage.removeItem('reimb-state'); } catch(e) {}
+  try { localStorage.removeItem('reimb-staff'); } catch(e) {}
+  if (db) {
+    const keys = await dbAllKeys();
+    if (Array.isArray(keys)) for (const k of keys) await dbDel(k);
+  }
+  const p = defaultPeriod();
+  state.staff = '';
+  state.periodFrom = p.from;
+  state.periodTo = p.to;
+  state.baseCurrency = CFG['currency-base'];
+  state.fxRateMemory = {};
+  state.items = [newItem()];
+  state._grandTotal = 0;
+  render();
 }
 
 // ========== SAVE HANDLER ==========
