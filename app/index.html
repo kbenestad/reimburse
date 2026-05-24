@@ -948,14 +948,14 @@ async function generatePDF() {
   y -= lh + 6;
 
   // Divider
-  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:1.5, color:accent});
+  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:3, color:accent});
   y -= lh;
 
   // Items
   state.items.forEach(item => {
     // Item header
     needSpace(lh * 6); // need room for at least header + one line
-    pg.drawText('ITEM / PROJECT / TRAVEL', {x:M.left, y, size:szSm, font:fontBold, color:accent});
+    pg.drawText('ITEM / PROJECT / TRAVEL', {x:M.left, y, size:sz, font:fontBold, color:accent});
     const subStr = `Subtotal: ${baseCur} ${fmtAmt(item._subtotal)}`;
     const subW = fontBold.widthOfTextAtSize(subStr, sz);
     pg.drawText(subStr, {x:M.left+W-subW, y, size:sz, font:fontBold, color:accent});
@@ -966,58 +966,57 @@ async function generatePDF() {
     // Lines
     item.lines.forEach((ln, li) => {
       needSpace(lh * 8);
-      if (li > 0 && !justBroke) {
-        y -= 4;
-        pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.3, color:lineCol});
-        y -= 8;
+
+      // Thin grey rule above each vendor line
+      if (!justBroke) {
+        if (li > 0) y -= 6;
+        pg.drawLine({start:{x:M.left, y:y+lh+1}, end:{x:M.left+W, y:y+lh+1}, thickness:0.3, color:lineCol});
       }
 
-      const boxW = W * 0.65;   // width of vendor / description boxes
-      const boxH = lh;          // box height matches line height
-      const boxFill = rgb(0.97, 0.97, 0.97);
+      const boxW = W * 0.65;   // text width for vendor / description
 
-      // Line 1: [Vendor box]  LCC amount
+      // Line 1: Vendor   FXC amount  LCC amount
       const baseAmt = (() => { const a=parseFloat(ln.amount)||0, r=parseFloat(ln.fxRate)||1; return r>0?a/r:0; })();
       const baseAmtStr = `${baseCur} ${fmtAmt(baseAmt)}`;
       const baseAmtW = fontBold.widthOfTextAtSize(baseAmtStr, sz);
-      pg.drawRectangle({x:M.left, y:y-2, width:boxW, height:boxH, borderColor:lineCol, borderWidth:0.5, color:boxFill});
-      pg.drawText(truncate(ln.vendor||'–', fontBody, sz, boxW-8), {x:M.left+4, y, size:sz, font:fontBody, color:black});
+      pg.drawText(truncate(ln.vendor||'–', fontBody, sz, boxW-4), {x:M.left, y, size:sz, font:fontBody, color:black});
+      if (ln.currency && ln.currency !== baseCur) {
+        const fxAmtStr = `${ln.currency} ${fmtAmt(ln.amount)}`;
+        const fxAmtW = fontBody.widthOfTextAtSize(fxAmtStr, szSm);
+        pg.drawText(fxAmtStr, {x:M.left+W-baseAmtW-fxAmtW-6, y, size:szSm, font:fontBody, color:gray});
+      }
       pg.drawText(baseAmtStr, {x:M.left+W-baseAmtW, y, size:sz, font:fontBold, color:black});
-      y -= boxH + 4;
+      y -= lh + 2;
 
-      // Line 2: [Description box]  Date: YYYY-MM-DD
+      // Line 2: Description   Date: YYYY-MM-DD
       const dateInPeriod = isDateInPeriod(ln.date);
       const dateColor = dateInPeriod ? black : rgb(0.9, 0.33, 0);
       const dateStr = `Date: ${ln.date||'–'}${dateInPeriod ? '' : ' (!)'}`;
       const dateStrW = fontBody.widthOfTextAtSize(dateStr, szSm);
-      pg.drawRectangle({x:M.left, y:y-2, width:boxW, height:boxH, borderColor:lineCol, borderWidth:0.5, color:boxFill});
-      pg.drawText(truncate(ln.description||'–', fontBody, sz, boxW-8), {x:M.left+4, y, size:sz, font:fontBody, color:black});
+      pg.drawText(truncate(ln.description||'–', fontBody, sz, boxW-4), {x:M.left, y, size:sz, font:fontBody, color:black});
       pg.drawText(dateStr, {x:M.left+W-dateStrW, y, size:szSm, font:fontBody, color:dateColor});
-      y -= boxH + 4;
+      y -= lh + 2;
 
-      // Line 3: Receipt: …  (left, backfilled)   FXC amount – FXC rate per LCC  (right)
+      // Line 3: Receipt ref (backfilled) or explanation   FXC rate detail (right)
       if (ln.currency && ln.currency !== baseCur) {
-        const fxDetail = `${ln.currency} ${fmtAmt(ln.amount)}  –  ${ln.currency} ${parseFloat(ln.fxRate||'0').toFixed(5)} per ${baseCur}`;
+        const fxDetail = `${ln.currency} ${parseFloat(ln.fxRate||'0').toFixed(5)} per ${baseCur}`;
         const fxDetailW = fontBody.widthOfTextAtSize(fxDetail, szSm);
         pg.drawText(fxDetail, {x:M.left+W-fxDetailW, y, size:szSm, font:fontBody, color:gray});
       }
       if (ln.hasReceipt && ln.receipts.length > 0) {
         ln.receipts.forEach((r, ri) => {
           const key = `${ln.id}-${ri}`;
-          receiptRefs.push({pageIdx: pages.length-1, x:M.left, y, key, prefix:'Receipt: '});
+          receiptRefs.push({pageIdx: pages.length-1, x:M.left, y, key, prefix:''});
           y -= lh;
         });
       } else if (!ln.hasReceipt) {
-        pg.drawText('Receipt: No receipt', {x:M.left, y, size:sz, font:fontBody, color:black});
-        y -= lh;
-        const explLines = wrapText(ln.noReceiptExplanation||'–', fontBody, szSm, boxW);
+        const explLines = wrapText(ln.noReceiptExplanation||'–', fontBody, szSm, W * 0.6);
         explLines.forEach(line => {
           needSpace(lh);
-          pg.drawText(`  ${line}`, {x:M.left, y, size:szSm, font:fontBody, color:gray});
+          pg.drawText(line, {x:M.left, y, size:szSm, font:fontBody, color:gray});
           y -= lh;
         });
       } else {
-        pg.drawText('Receipt: –', {x:M.left, y, size:sz, font:fontBody, color:gray});
         y -= lh;
       }
 
