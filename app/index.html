@@ -366,7 +366,7 @@ function renderLine(ln, item) {
     if (progAreaEl) progAreaEl._refresh();
   });
 
-  const fxIn = el('input', {type:'text', value: ln.fxRate, style:{width:'120px'}, placeholder:'0.00000'});
+  const fxIn = el('input', {type:'text', value: ln.fxRate, style:{width:'120px', textAlign:'right'}, placeholder:'0.00000'});
   fxIn.readOnly = ln.currency === baseCur;
   fxIn.className = 'tip';
   fxIn.dataset.tip = `Units of ${ln.currency || '?'} per 1 ${baseCur}`;
