@@ -954,9 +954,9 @@ async function generatePDF() {
   // Items
   state.items.forEach((item, itemIdx) => {
     // Item header
-    needSpace(lh * 7); // need room for separator gap + header + one line
+    needSpace(lh * 8); // need room for separator gap + header + one line
     if (itemIdx > 0) {
-      y -= lh;  // create gap below previous item before drawing separator
+      y -= lh * 2;  // full gap below previous item's stripe before separator
       pg.drawLine({start:{x:M.left, y:y+lh}, end:{x:M.left+W, y:y+lh}, thickness:0.75, color:accent});
     }
     pg.drawText('ITEM / PROJECT / TRAVEL', {x:M.left, y, size:sz, font:fontBold, color:accent});
