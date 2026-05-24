@@ -368,7 +368,8 @@ function renderLine(ln, item) {
   const baseCur = state.baseCurrency;
 
   // Row 1: Date, Vendor, Currency, FX Rate
-  const dateIn = el('input', {type:'date', value: ln.date, style:{width:'150px'}});
+  const dateIn = el('input', {type:'date', style:{width:'150px'}});
+  if (ln.date) dateIn.value = ln.date;
   if (ln.date && !isDateInPeriod(ln.date)) dateIn.classList.add('input-warn');
   dateIn.addEventListener('change', async () => {
     ln.date = dateIn.value;
