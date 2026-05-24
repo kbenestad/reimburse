@@ -395,8 +395,17 @@ function renderLine(ln, item) {
   const vendIn = el('input', {type:'text', value: ln.vendor, placeholder:'Vendor name'});
   vendIn.addEventListener('input', () => { ln.vendor = vendIn.value; });
 
+  async function showFxModal(code) {
+    const bn = getCurrencyName(baseCur);
+    const isOther = !code || code === 'Other';
+    const tmpl = isOther
+      ? (CFG['fx-rate-message-other'] || 'You have selected an expense in a currency different from the one in which you are submitting your claim. Enter the three letter currency code first, and then enter the exchange rate as amount of the foreign currency you pay for 1 {base}.')
+      : (CFG['fx-rate-message'] || 'You have selected an expense in a currency different from the one in which you are submitting your claim. Please enter the exchange rate as amount of {foreign} you pay for 1 {base}.');
+    const fn = isOther ? 'the foreign currency' : getCurrencyName(code);
+    await showWarningModal(tmpl.replace(/\{foreign\}/g, fn).replace(/\{base\}/g, bn));
+  }
+
   function applyFxCurrency(code) {
-    fxIn.dataset.tip = buildFxTip(code, baseCur);
     if (code === baseCur) {
       ln.fxRate = '1.00000'; fxIn.value = '1.00000'; fxIn.readOnly = true;
     } else {
@@ -409,28 +418,28 @@ function renderLine(ln, item) {
     if (progAreaEl) progAreaEl._refresh();
   }
 
-  const currenciesWithOther = [...currencies, {code: '__OTHER__', name: 'Other (enter ISO code)'}];
-  const curDD = makeCDD(currenciesWithOther, ln.customCurrency ? '__OTHER__' : ln.currency, code => {
-    if (code === '__OTHER__') {
+  const currenciesWithOther = [...currencies, {code: 'Other', name: 'Enter ISO code'}];
+  const curDD = makeCDD(currenciesWithOther, ln.customCurrency ? 'Other' : ln.currency, async code => {
+    if (code === 'Other') {
       ln.customCurrency = true;
       ln.currency = '';
       curDD.style.display = 'none';
       otherCurWrap.style.display = 'flex';
-      ln.fxRate = ''; fxIn.value = ''; fxIn.readOnly = false; fxIn.dataset.tip = '';
+      ln.fxRate = ''; fxIn.value = ''; fxIn.readOnly = false;
       recalc(); if (progAreaEl) progAreaEl._refresh();
+      await showFxModal('Other');
       otherCurIn.focus();
     } else {
       ln.customCurrency = false;
       ln.currency = code;
       applyFxCurrency(code);
+      if (code !== baseCur) await showFxModal(code);
     }
   });
   if (ln.customCurrency) curDD.style.display = 'none';
 
   const otherCurIn = el('input', {type:'text', maxlength:'3', placeholder:'e.g. THB',
     style:{width:'70px', textTransform:'uppercase', letterSpacing:'1px', fontFamily:'inherit'}});
-  otherCurIn.className = 'tip';
-  otherCurIn.dataset.tip = 'You have selected other currency. Please insert the three-letter ISO code (THB for Thai baht, USD for US dollars).';
   if (ln.customCurrency && ln.currency) otherCurIn.value = ln.currency;
   otherCurIn.addEventListener('input', () => {
     const val = otherCurIn.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
@@ -439,7 +448,7 @@ function renderLine(ln, item) {
     if (val.length === 3) {
       applyFxCurrency(val);
     } else {
-      ln.fxRate = ''; fxIn.value = ''; fxIn.readOnly = false; fxIn.dataset.tip = '';
+      ln.fxRate = ''; fxIn.value = ''; fxIn.readOnly = false;
       recalc(); if (progAreaEl) progAreaEl._refresh();
     }
   });
@@ -463,8 +472,6 @@ function renderLine(ln, item) {
   const fxIn = el('input', {type:'text', style:{width:'120px', textAlign:'right'}, placeholder:'0.00000'});
   fxIn.value = ln.fxRate;
   fxIn.readOnly = !ln.customCurrency && ln.currency === baseCur;
-  fxIn.className = 'tip';
-  fxIn.dataset.tip = buildFxTip(ln.currency, baseCur);
   fxIn.addEventListener('input', () => {
     ln.fxRate = fxIn.value;
     const rate = parseFloat(fxIn.value);

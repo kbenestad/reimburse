@@ -25,6 +25,10 @@ accent-colour: "#1a3a5c"
 intro: ""
 footer: "Confidential"
 
+# FX rate modal messages ({foreign} = foreign currency name, {base} = base currency name)
+fx-rate-message: "You have selected an expense in a currency different from the one in which you are submitting your claim. Please enter the exchange rate as amount of {foreign} you pay for 1 {base}."
+fx-rate-message-other: "You have selected an expense in a currency different from the one in which you are submitting your claim. Enter the three letter currency code first, and then enter the exchange rate as amount of the foreign currency you pay for 1 {base}."
+
 # Base currency (ISO code — must appear in currencies list)
 currency-base: USD
 
