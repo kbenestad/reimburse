@@ -171,7 +171,7 @@ const state = { staff: '', periodFrom: '', periodTo: '', baseCurrency: '', fxRat
 function newItem() { return { id: uid(), name: '', lines: [newLine()], _subtotal: 0 }; }
 function newLine() {
   return {
-    id: uid(), date: '', description: '', currency: state.baseCurrency,
+    id: uid(), date: state.periodFrom || '', description: '', currency: state.baseCurrency,
     fxRate: '1.00000', vendor: '', hasReceipt: true, receipts: [],
     noReceiptExplanation: '', amount: '', account: '',
     programs: [{ program: '', percent: '', programOther: '' }]
