@@ -29,6 +29,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 input[readonly] { background: #f0f1f3; color: var(--muted); }
 textarea { resize: vertical; min-height: 48px; width: 100%; }
 .input-err { border-color: var(--err) !important; }
+.input-warn { border-color: #e65100 !important; background: #fff8f0 !important; }
 
 /* Divider */
 .divider { border: none; border-top: 2px solid var(--accent); margin: 20px 0; }
@@ -130,7 +131,29 @@ function defaultPeriod() {
   return { from: fmt(new Date(y, m, 1)), to: fmt(new Date(y, m + 1, 0)) };
 }
 
-// ========== DATE FORMATTING ==========
+// ========== DATE HELPERS ==========
+function isDateInPeriod(date) {
+  if (!date || !state.periodFrom || !state.periodTo) return true;
+  return date >= state.periodFrom && date <= state.periodTo;
+}
+
+function showWarningModal(msg) {
+  return new Promise(resolve => {
+    const overlay = el('div', {style:{position:'fixed',top:'0',right:'0',bottom:'0',left:'0',background:'rgba(0,0,0,.45)',zIndex:'9999',display:'flex',alignItems:'center',justifyContent:'center'}});
+    const box = el('div', {style:{background:'#fff',borderRadius:'8px',padding:'24px 28px',maxWidth:'400px',width:'90%',boxShadow:'0 8px 32px rgba(0,0,0,.25)'}});
+    const hdr = el('div', {style:{display:'flex',alignItems:'center',gap:'10px',marginBottom:'14px'}});
+    hdr.append(el('span', {style:{fontSize:'20px',color:'#e65100'}}, '⚠'), el('strong', {style:{fontSize:'15px',color:'#e65100'}}, 'Warning'));
+    const body = el('p', {style:{fontSize:'13px',lineHeight:'1.6',color:'var(--text)',marginBottom:'20px'}}, msg);
+    const footer = el('div', {style:{display:'flex',justifyContent:'flex-end'}});
+    const okBtn = el('button', {className:'btn btn-gen', style:{width:'auto',padding:'8px 28px',marginTop:'0'}}, 'OK');
+    okBtn.addEventListener('click', () => { overlay.remove(); resolve(); });
+    footer.appendChild(okBtn);
+    box.append(hdr, body, footer);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    okBtn.focus();
+  });
+}
 
 
 // ========== CONFIG ==========
@@ -346,7 +369,16 @@ function renderLine(ln, item) {
 
   // Row 1: Date, Vendor, Currency, FX Rate
   const dateIn = el('input', {type:'date', value: ln.date, style:{width:'150px'}});
-  dateIn.addEventListener('change', () => { ln.date = dateIn.value; });
+  if (ln.date && !isDateInPeriod(ln.date)) dateIn.classList.add('input-warn');
+  dateIn.addEventListener('change', async () => {
+    ln.date = dateIn.value;
+    if (ln.date && !isDateInPeriod(ln.date)) {
+      dateIn.classList.add('input-warn');
+      await showWarningModal('The date of the expense is not within the period you have chosen at the top of the form. You can continue with this date, but it will be flagged on the form.');
+    } else {
+      dateIn.classList.remove('input-warn');
+    }
+  });
 
   const vendIn = el('input', {type:'text', value: ln.vendor, placeholder:'Vendor name'});
   vendIn.addEventListener('input', () => { ln.vendor = vendIn.value; });
@@ -744,7 +776,9 @@ async function generatePDF() {
       pg.drawText('FX rate', {x:M.left+c4, y, size:szSm-1, font:fontBold, color:gray});
       y -= lh;
       // Row 1 values
-      pg.drawText(ln.date || '–', {x:M.left+c1, y, size:sz, font:fontBody, color:black});
+      const dateInPeriod = isDateInPeriod(ln.date);
+      const dateColor = dateInPeriod ? black : rgb(0.9, 0.33, 0);
+      pg.drawText((ln.date || '–') + (dateInPeriod ? '' : ' (!)'), {x:M.left+c1, y, size:sz, font:fontBody, color:dateColor});
       pg.drawText(truncate(ln.vendor, fontBody, sz, (c3-c2)-8), {x:M.left+c2, y, size:sz, font:fontBody, color:black});
       pg.drawText(ln.currency, {x:M.left+c3, y, size:sz, font:fontBody, color:black});
       const fxStr = ln.currency === baseCur ? '–' : parseFloat(ln.fxRate).toFixed(5);
