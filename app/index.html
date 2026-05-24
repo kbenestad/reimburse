@@ -339,6 +339,7 @@ function renderItem(item) {
 
 function renderLine(ln, item) {
   const blk = el('div', {className:'line-blk', id:`line-${ln.id}`});
+  let progAreaEl;
 
   const currencies = CFG.currencies || [];
   const baseCur = state.baseCurrency;
@@ -362,6 +363,7 @@ function renderLine(ln, item) {
       else if (ln.fxRate === '1.00000') { ln.fxRate = ''; fxIn.value = ''; }
     }
     recalc();
+    if (progAreaEl) progAreaEl._refresh();
   });
 
   const fxIn = el('input', {type:'text', value: ln.fxRate, style:{width:'120px'}, placeholder:'0.00000'});
@@ -373,6 +375,7 @@ function renderLine(ln, item) {
     const rate = parseFloat(fxIn.value);
     if (ln.currency && ln.currency !== baseCur && rate > 0) state.fxRateMemory[ln.currency] = fxIn.value;
     recalc();
+    if (progAreaEl) progAreaEl._refresh();
   });
 
   blk.appendChild(el('div', {className:'frow'}, [
@@ -393,7 +396,7 @@ function renderLine(ln, item) {
   });
 
   const amtIn = el('input', {type:'text', value: ln.amount, style:{width:'120px', textAlign:'right'}, placeholder:'0.00'});
-  amtIn.addEventListener('input', () => { ln.amount = amtIn.value; recalc(); });
+  amtIn.addEventListener('input', () => { ln.amount = amtIn.value; recalc(); if (progAreaEl) progAreaEl._refresh(); });
 
   blk.appendChild(el('div', {className:'frow'}, [
     el('div', {className:'fgrp grow'}, [el('label', null, 'Description'), descIn]),
@@ -403,7 +406,8 @@ function renderLine(ln, item) {
 
   // Row 3: Account, Program
   const acctSel = makeSelect(CFG.accounts || [], ln.account, v => { ln.account = v; }, 'Select account');
-  const progGrp = el('div', {className:'fgrp grow'}, [el('label', null, 'Program'), buildProgramArea(ln)]);
+  progAreaEl = buildProgramArea(ln);
+  const progGrp = el('div', {className:'fgrp grow'}, [el('label', null, 'Program'), progAreaEl]);
 
   blk.appendChild(el('div', {className:'frow'}, [
     el('div', {className:'fgrp grow'}, [el('label', null, 'Account'), acctSel]),
@@ -460,76 +464,101 @@ function buildReceiptArea(ln) {
 }
 
 function buildProgramArea(ln) {
-  const container = el('div');
+  const wrapper = el('div');
   const progOptions = CFG.programs || [];
-  const isMulti = ln.programs.length > 1;
-  let totalSpan = null;
 
-  function updateTotal() {
-    if (!totalSpan) return;
-    const sum = ln.programs.reduce((s, pe) => s + (parseFloat(pe.percent) || 0), 0);
-    totalSpan.textContent = sum.toFixed(2) + '%';
-    totalSpan.style.color = sum < 99.995 ? '#c6a800' : sum <= 100.005 ? '#2e7d32' : '#c62828';
-  }
+  function rebuild() {
+    while (wrapper.firstChild) wrapper.removeChild(wrapper.firstChild);
+    const isMulti = ln.programs.length > 1;
+    const amtSpans = [];
+    let totalSpan = null;
 
-  ln.programs.forEach((pe, pi) => {
-    const progSel = makeSelect(progOptions, pe.program, v => {
-      pe.program = v;
-      otherIn.style.display = v === 'Other' ? '' : 'none';
-    }, 'Select program');
-    progSel.style.flex = '1';
+    function getBaseAmt() {
+      const amt = parseFloat(ln.amount) || 0;
+      const rate = parseFloat(ln.fxRate) || 1;
+      return rate > 0 ? amt / rate : 0;
+    }
 
-    const otherIn = el('input', {type:'text', value: pe.programOther, placeholder:'Specify program',
-      style:{display: pe.program === 'Other' ? '' : 'none', marginTop:'4px', width:'100%'}});
-    otherIn.addEventListener('input', () => { pe.programOther = otherIn.value; });
+    function updateDerived() {
+      const base = getBaseAmt();
+      amtSpans.forEach((span, i) => {
+        const pct = parseFloat((ln.programs[i] || {}).percent) || 0;
+        span.textContent = `${state.baseCurrency} ${fmtAmt(base * pct / 100)}`;
+      });
+      if (totalSpan) {
+        const sum = ln.programs.reduce((s, pe) => s + (parseFloat(pe.percent) || 0), 0);
+        totalSpan.textContent = sum.toFixed(2) + '%';
+        totalSpan.style.color = sum < 99.995 ? '#c6a800' : sum <= 100.005 ? '#2e7d32' : '#c62828';
+      }
+    }
 
-    if (!isMulti) {
-      const addBtn = el('button', {type:'button', className:'btn btn-add'}, '+ Add program');
+    ln.programs.forEach((pe, pi) => {
+      const progSel = makeSelect(progOptions, pe.program, v => {
+        pe.program = v;
+        otherIn.style.display = v === 'Other' ? '' : 'none';
+      }, 'Select program');
+      progSel.style.flex = '1';
+
+      const otherIn = el('input', {type:'text', value: pe.programOther, placeholder:'Specify program',
+        style:{display: pe.program === 'Other' ? '' : 'none', marginTop:'4px', width:'100%'}});
+      otherIn.addEventListener('input', () => { pe.programOther = otherIn.value; });
+
+      if (!isMulti) {
+        const addBtn = el('button', {type:'button', className:'btn btn-add'}, '+ Add program');
+        addBtn.addEventListener('click', () => {
+          ln.programs.push({program:'', percent:'', programOther:''});
+          rebuild();
+        });
+        const row = el('div', {style:{display:'flex', gap:'8px', alignItems:'center'}});
+        row.append(progSel, addBtn);
+        wrapper.append(row, otherIn);
+      } else {
+        const pctIn = el('input', {type:'number', min:'0', max:'100', step:'0.01',
+          value: pe.percent, style:{width:'70px', textAlign:'right'}});
+        pctIn.addEventListener('input', () => { pe.percent = pctIn.value; updateDerived(); });
+
+        const amtSpan = el('span', {style:{fontSize:'13px', color:'var(--muted)', whiteSpace:'nowrap'}});
+        amtSpans.push(amtSpan);
+
+        const rmBtn = el('button', {type:'button', className:'btn btn-rm', style:{padding:'3px 7px'}}, '×');
+        rmBtn.addEventListener('click', () => {
+          ln.programs.splice(pi, 1);
+          rebuild();
+        });
+
+        const row = el('div', {style:{display:'flex', gap:'8px', alignItems:'center', marginBottom:'4px'}});
+        row.append(progSel,
+          el('span', {style:{fontSize:'13px', color:'var(--muted)', whiteSpace:'nowrap'}}, 'Percent:'),
+          pctIn,
+          el('span', {style:{fontSize:'13px'}}, '%'),
+          el('span', {style:{fontSize:'13px', color:'var(--muted)'}}, '–'),
+          amtSpan,
+          rmBtn);
+        wrapper.append(row, otherIn);
+      }
+    });
+
+    if (isMulti) {
+      totalSpan = el('span', {style:{fontWeight:'600', fontSize:'13px'}});
+      const totalRow = el('div',
+        {style:{display:'flex', justifyContent:'flex-end', alignItems:'center', gap:'6px', marginTop:'4px', marginBottom:'4px'}},
+        [el('span', {style:{fontSize:'13px', color:'var(--muted)'}}, 'Total percent:'), totalSpan]);
+      wrapper.appendChild(totalRow);
+
+      const addBtn = el('button', {type:'button', className:'btn btn-add', style:{marginTop:'2px'}}, '+ Add program');
       addBtn.addEventListener('click', () => {
         ln.programs.push({program:'', percent:'', programOther:''});
-        container.replaceWith(buildProgramArea(ln));
+        rebuild();
       });
-      const row = el('div', {style:{display:'flex', gap:'8px', alignItems:'center'}});
-      row.append(progSel, addBtn);
-      container.append(row, otherIn);
-    } else {
-      const pctIn = el('input', {type:'number', min:'0', max:'100', step:'0.01',
-        value: pe.percent, style:{width:'70px', textAlign:'right'}});
-      pctIn.addEventListener('input', () => { pe.percent = pctIn.value; updateTotal(); });
-
-      const rmBtn = el('button', {type:'button', className:'btn btn-rm', style:{padding:'3px 7px'}}, '×');
-      rmBtn.addEventListener('click', () => {
-        ln.programs.splice(pi, 1);
-        container.replaceWith(buildProgramArea(ln));
-      });
-
-      const row = el('div', {style:{display:'flex', gap:'8px', alignItems:'center', marginBottom:'4px'}});
-      row.append(progSel,
-        el('span', {style:{fontSize:'13px', color:'var(--muted)', whiteSpace:'nowrap'}}, 'Percent:'),
-        pctIn,
-        el('span', {style:{fontSize:'13px'}}, '%'),
-        rmBtn);
-      container.append(row, otherIn);
+      wrapper.appendChild(addBtn);
     }
-  });
 
-  if (isMulti) {
-    totalSpan = el('span', {style:{fontWeight:'600', fontSize:'13px'}});
-    const totalRow = el('div',
-      {style:{display:'flex', justifyContent:'flex-end', alignItems:'center', gap:'6px', marginTop:'4px', marginBottom:'4px'}},
-      [el('span', {style:{fontSize:'13px', color:'var(--muted)'}}, 'Total percent:'), totalSpan]);
-    container.appendChild(totalRow);
-    updateTotal();
-
-    const addBtn = el('button', {type:'button', className:'btn btn-add', style:{marginTop:'2px'}}, '+ Add program');
-    addBtn.addEventListener('click', () => {
-      ln.programs.push({program:'', percent:'', programOther:''});
-      container.replaceWith(buildProgramArea(ln));
-    });
-    container.appendChild(addBtn);
+    updateDerived();
   }
 
-  return container;
+  wrapper._refresh = rebuild;
+  rebuild();
+  return wrapper;
 }
 
 // ========== VALIDATION ==========
@@ -748,13 +777,16 @@ async function generatePDF() {
         pg.drawText(truncate(progStr, fontBody, sz, W * 0.5 - 8), {x:M.left+W*0.5, y, size:sz, font:fontBody, color:black});
         y -= lh;
       } else {
+        const lineBaseAmt = (() => { const a = parseFloat(ln.amount)||0, r = parseFloat(ln.fxRate)||1; return r>0?a/r:0; })();
         progs.forEach((pe, pi) => {
           if (pi > 0) { needSpace(lh); }
           const progStr = pe.program === 'Other' ? `Other: ${pe.programOther}` : (pe.program || '–');
-          const pctStr = ` (${parseFloat(pe.percent).toFixed(2)}%)`;
+          const pct = parseFloat(pe.percent) || 0;
+          const progAmt = lineBaseAmt * pct / 100;
+          const suffix = `  ${pct.toFixed(2)}% – ${baseCur} ${fmtAmt(progAmt)}`;
           pg.drawText(truncate(progStr, fontBody, sz, W * 0.45 - 8), {x:M.left+W*0.5, y, size:sz, font:fontBody, color:black});
-          const pctW = fontBody.widthOfTextAtSize(pctStr, szSm);
-          pg.drawText(pctStr, {x:M.left+W-pctW, y, size:szSm, font:fontBody, color:gray});
+          const sfxW = fontBody.widthOfTextAtSize(suffix, szSm);
+          pg.drawText(suffix, {x:M.left+W-sfxW, y, size:szSm, font:fontBody, color:gray});
           y -= lh;
         });
       }
