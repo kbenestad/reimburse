@@ -965,90 +965,87 @@ async function generatePDF() {
 
     // Lines
     item.lines.forEach((ln, li) => {
-      needSpace(lh * 7);
+      needSpace(lh * 8);
       if (li > 0 && !justBroke) {
         y -= 4;
         pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.3, color:lineCol});
         y -= 8;
       }
-      const c1=0, c2=W*0.22, c3=W*0.68, c4=W*0.82;
 
-      // Row 1 labels: Date | Vendor | Currency | FX rate
-      pg.drawText('Date', {x:M.left+c1, y, size:szSm-1, font:fontBold, color:gray});
-      pg.drawText('Vendor', {x:M.left+c2, y, size:szSm-1, font:fontBold, color:gray});
-      pg.drawText('Currency', {x:M.left+c3, y, size:szSm-1, font:fontBold, color:gray});
-      const fxLbl = 'FX rate'; pg.drawText(fxLbl, {x:M.left+W-fontBold.widthOfTextAtSize(fxLbl,szSm-1), y, size:szSm-1, font:fontBold, color:gray});
-      y -= lh;
-      // Row 1 values
+      const boxW = W * 0.65;   // width of vendor / description boxes
+      const boxH = lh;          // box height matches line height
+      const boxFill = rgb(0.97, 0.97, 0.97);
+
+      // Line 1: [Vendor box]  LCC amount
+      const baseAmt = (() => { const a=parseFloat(ln.amount)||0, r=parseFloat(ln.fxRate)||1; return r>0?a/r:0; })();
+      const baseAmtStr = `${baseCur} ${fmtAmt(baseAmt)}`;
+      const baseAmtW = fontBold.widthOfTextAtSize(baseAmtStr, sz);
+      pg.drawRectangle({x:M.left, y:y-2, width:boxW, height:boxH, borderColor:lineCol, borderWidth:0.5, color:boxFill});
+      pg.drawText(truncate(ln.vendor||'–', fontBody, sz, boxW-8), {x:M.left+4, y, size:sz, font:fontBody, color:black});
+      pg.drawText(baseAmtStr, {x:M.left+W-baseAmtW, y, size:sz, font:fontBold, color:black});
+      y -= boxH + 4;
+
+      // Line 2: [Description box]  Date: YYYY-MM-DD
       const dateInPeriod = isDateInPeriod(ln.date);
       const dateColor = dateInPeriod ? black : rgb(0.9, 0.33, 0);
-      pg.drawText((ln.date || '–') + (dateInPeriod ? '' : ' (!)'), {x:M.left+c1, y, size:sz, font:fontBody, color:dateColor});
-      pg.drawText(truncate(ln.vendor, fontBody, sz, (c3-c2)-8), {x:M.left+c2, y, size:sz, font:fontBody, color:black});
-      pg.drawText(ln.currency, {x:M.left+c3, y, size:sz, font:fontBody, color:black});
-      const fxStr = ln.currency === baseCur ? '–' : parseFloat(ln.fxRate).toFixed(5);
-      const fxW = fontBody.widthOfTextAtSize(fxStr, sz);
-      pg.drawText(fxStr, {x:M.left+W-fxW, y, size:sz, font:fontBody, color:black});
-      y -= lh + 2;
+      const dateStr = `Date: ${ln.date||'–'}${dateInPeriod ? '' : ' (!)'}`;
+      const dateStrW = fontBody.widthOfTextAtSize(dateStr, szSm);
+      pg.drawRectangle({x:M.left, y:y-2, width:boxW, height:boxH, borderColor:lineCol, borderWidth:0.5, color:boxFill});
+      pg.drawText(truncate(ln.description||'–', fontBody, sz, boxW-8), {x:M.left+4, y, size:sz, font:fontBody, color:black});
+      pg.drawText(dateStr, {x:M.left+W-dateStrW, y, size:szSm, font:fontBody, color:dateColor});
+      y -= boxH + 4;
 
-      // Row 2 labels: Description | Receipt | Amount
-      pg.drawText('Description', {x:M.left, y, size:szSm-1, font:fontBold, color:gray});
-      pg.drawText('Receipt', {x:M.left+c3, y, size:szSm-1, font:fontBold, color:gray});
-      const amtLbl = 'Amount'; pg.drawText(amtLbl, {x:M.left+W-fontBold.widthOfTextAtSize(amtLbl,szSm-1), y, size:szSm-1, font:fontBold, color:gray});
-      y -= lh;
-      // Row 2 values
-      pg.drawText(truncate(ln.description, fontBody, sz, (c3)-8), {x:M.left, y, size:sz, font:fontBody, color:black});
-      pg.drawText(ln.hasReceipt ? 'Yes' : 'No', {x:M.left+c3, y, size:sz, font:fontBody, color:black});
-      const amtStr = `${ln.currency} ${fmtAmt(ln.amount)}`;
-      const amtW = fontBody.widthOfTextAtSize(amtStr, sz);
-      pg.drawText(amtStr, {x:M.left+W-amtW, y, size:sz, font:fontBody, color:black});
-      y -= lh + 2;
+      // Line 3: Receipt: …  (left, backfilled)   FXC amount – FXC rate per LCC  (right)
+      if (ln.currency && ln.currency !== baseCur) {
+        const fxDetail = `${ln.currency} ${fmtAmt(ln.amount)}  –  ${ln.currency} ${parseFloat(ln.fxRate||'0').toFixed(5)} per ${baseCur}`;
+        const fxDetailW = fontBody.widthOfTextAtSize(fxDetail, szSm);
+        pg.drawText(fxDetail, {x:M.left+W-fxDetailW, y, size:szSm, font:fontBody, color:gray});
+      }
+      if (ln.hasReceipt && ln.receipts.length > 0) {
+        ln.receipts.forEach((r, ri) => {
+          const key = `${ln.id}-${ri}`;
+          receiptRefs.push({pageIdx: pages.length-1, x:M.left, y, key, prefix:'Receipt: '});
+          y -= lh;
+        });
+      } else if (!ln.hasReceipt) {
+        pg.drawText('Receipt: No receipt', {x:M.left, y, size:sz, font:fontBody, color:black});
+        y -= lh;
+        const explLines = wrapText(ln.noReceiptExplanation||'–', fontBody, szSm, boxW);
+        explLines.forEach(line => {
+          needSpace(lh);
+          pg.drawText(`  ${line}`, {x:M.left, y, size:szSm, font:fontBody, color:gray});
+          y -= lh;
+        });
+      } else {
+        pg.drawText('Receipt: –', {x:M.left, y, size:sz, font:fontBody, color:gray});
+        y -= lh;
+      }
 
-      // Row 3 labels
-      pg.drawText('Account', {x:M.left, y, size:szSm-1, font:fontBold, color:gray});
-      pg.drawText('Program', {x:M.left+W*0.5, y, size:szSm-1, font:fontBold, color:gray});
-      y -= lh;
-      pg.drawText(ln.account || '–', {x:M.left, y, size:sz, font:fontBody, color:black});
+      // Line 4: Account: value   Program: value (inline labels)
       const progs = ln.programs || [];
+      pg.drawText(`Account: ${ln.account||'–'}`, {x:M.left, y, size:sz, font:fontBody, color:black});
       if (progs.length <= 1) {
         const pe = progs[0] || {};
-        const progStr = pe.program === 'Other' ? `Other: ${pe.programOther}` : (pe.program || '–');
-        pg.drawText(truncate(progStr, fontBody, sz, W * 0.5 - 8), {x:M.left+W*0.5, y, size:sz, font:fontBody, color:black});
+        const progVal = pe.program === 'Other' ? `Other: ${pe.programOther}` : (pe.program||'–');
+        pg.drawText(truncate(`Program: ${progVal}`, fontBody, sz, W*0.5-8), {x:M.left+W*0.5, y, size:sz, font:fontBody, color:black});
         y -= lh;
       } else {
-        const lineBaseAmt = (() => { const a = parseFloat(ln.amount)||0, r = parseFloat(ln.fxRate)||1; return r>0?a/r:0; })();
+        const lineBaseAmt = (() => { const a=parseFloat(ln.amount)||0, r=parseFloat(ln.fxRate)||1; return r>0?a/r:0; })();
         progs.forEach((pe, pi) => {
           if (pi > 0) { needSpace(lh); }
-          const progStr = pe.program === 'Other' ? `Other: ${pe.programOther}` : (pe.program || '–');
-          const pct = parseFloat(pe.percent) || 0;
+          const progVal = pe.program === 'Other' ? `Other: ${pe.programOther}` : (pe.program||'–');
+          const pct = parseFloat(pe.percent)||0;
           const progAmt = lineBaseAmt * pct / 100;
+          const label = pi === 0 ? 'Program: ' : '          ';
+          pg.drawText(truncate(`${label}${progVal}`, fontBody, sz, W*0.45-8), {x:M.left+W*0.5, y, size:sz, font:fontBody, color:black});
           const suffix = `  ${pct.toFixed(2)}% – ${baseCur} ${fmtAmt(progAmt)}`;
-          pg.drawText(truncate(progStr, fontBody, sz, W * 0.45 - 8), {x:M.left+W*0.5, y, size:sz, font:fontBody, color:black});
           const sfxW = fontBody.widthOfTextAtSize(suffix, szSm);
           pg.drawText(suffix, {x:M.left+W-sfxW, y, size:szSm, font:fontBody, color:gray});
           y -= lh;
         });
       }
 
-      // Receipt reference or explanation
-      if (ln.hasReceipt && ln.receipts.length > 0) {
-        ln.receipts.forEach((r, ri) => {
-          const key = `${ln.id}-${ri}`;
-          const refX = M.left + W * 0.6;
-          receiptRefs.push({ pageIdx: pages.length - 1, x: refX, y, key });
-          y -= lh;
-        });
-      } else if (!ln.hasReceipt) {
-        needSpace(lh * 2);
-        pg.drawText('Explanation for no receipt:', {x:M.left, y, size:szSm-1, font:fontBold, color:gray});
-        y -= lh;
-        const explLines = wrapText(ln.noReceiptExplanation || '–', fontBody, sz, W);
-        explLines.forEach(line => {
-          needSpace(lh);
-          pg.drawText(line, {x:M.left, y, size:sz, font:fontBody, color:black});
-          y -= lh;
-        });
-      }
-      y -= 6;
+      y -= 4;
     });
 
   });
@@ -1114,7 +1111,8 @@ async function generatePDF() {
     const pageNum = receiptPageMap[ref.key];
     if (pageNum != null) {
       const pg2 = pages[ref.pageIdx];
-      pg2.drawText(`See page ${pageNum} for receipt`, {x:ref.x, y:ref.y, size:szSm, font:fontBody, color:gray});
+      const prefix = ref.prefix || '';
+      pg2.drawText(`${prefix}See page ${pageNum} for receipt`, {x:ref.x, y:ref.y, size:szSm, font:fontBody, color:gray});
     }
   });
 
