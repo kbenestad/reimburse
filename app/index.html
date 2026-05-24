@@ -56,6 +56,8 @@ textarea { resize: vertical; min-height: 48px; width: 100%; }
 .btn-gen { background: var(--accent); color: #fff; font-size: 15px; padding: 12px 32px; width: 100%; margin-top: 16px; border-radius: 6px; }
 .btn-gen:hover { opacity: .9; }
 .btn-gen:disabled { opacity: .5; cursor: not-allowed; }
+.btn-save { background: #2e7d32; color: #fff; font-size: 15px; padding: 12px 32px; border-radius: 6px; }
+.btn-save:hover { opacity: .9; }
 
 /* Totals */
 .totals-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; }
@@ -143,7 +145,8 @@ function showWarningModal(msg) {
     const box = el('div', {style:{background:'#fff',borderRadius:'8px',padding:'24px 28px',maxWidth:'400px',width:'90%',boxShadow:'0 8px 32px rgba(0,0,0,.25)'}});
     const hdr = el('div', {style:{display:'flex',alignItems:'center',gap:'10px',marginBottom:'14px'}});
     hdr.append(el('span', {style:{fontSize:'20px',color:'#e65100'}}, '⚠'), el('strong', {style:{fontSize:'15px',color:'#e65100'}}, 'Warning'));
-    const body = el('p', {style:{fontSize:'13px',lineHeight:'1.6',color:'var(--text)',marginBottom:'20px'}}, msg);
+    const body = el('p', {style:{fontSize:'13px',lineHeight:'1.6',color:'var(--text)',marginBottom:'20px'}});
+    body.innerHTML = msg;
     const footer = el('div', {style:{display:'flex',justifyContent:'flex-end'}});
     const okBtn = el('button', {className:'btn btn-gen', style:{width:'auto',padding:'8px 28px',marginTop:'0'}}, 'OK');
     okBtn.addEventListener('click', () => { overlay.remove(); resolve(); });
@@ -176,6 +179,105 @@ function newLine() {
     noReceiptExplanation: '', amount: '', account: '', customCurrency: false,
     programs: [{ program: '', percent: '', programOther: '' }]
   };
+}
+
+// ========== PERSISTENCE ==========
+let db = null;
+let autoSaveTimer = null;
+
+async function initDB() {
+  return new Promise(resolve => {
+    if (!window.indexedDB) { resolve(false); return; }
+    const req = indexedDB.open('reimb-db', 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore('receipts');
+    req.onsuccess = e => { db = e.target.result; resolve(true); };
+    req.onerror = () => resolve(false);
+  });
+}
+
+function dbOp(mode, fn) {
+  return new Promise(resolve => {
+    if (!db) { resolve(undefined); return; }
+    const tx = db.transaction('receipts', mode);
+    const req = fn(tx.objectStore('receipts'));
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => resolve(undefined);
+  });
+}
+const dbPut = (k, v) => dbOp('readwrite', s => s.put(v, k));
+const dbGet = k => dbOp('readonly', s => s.get(k));
+const dbDel = k => dbOp('readwrite', s => s.delete(k));
+const dbAllKeys = () => dbOp('readonly', s => s.getAllKeys());
+
+async function saveState() {
+  const serial = {
+    staff: state.staff, periodFrom: state.periodFrom, periodTo: state.periodTo,
+    baseCurrency: state.baseCurrency, fxRateMemory: state.fxRateMemory,
+    items: state.items.map(item => ({
+      id: item.id, name: item.name,
+      lines: item.lines.map(ln => ({
+        id: ln.id, date: ln.date, description: ln.description,
+        currency: ln.currency, fxRate: ln.fxRate, vendor: ln.vendor,
+        hasReceipt: ln.hasReceipt, noReceiptExplanation: ln.noReceiptExplanation,
+        amount: ln.amount, account: ln.account, customCurrency: ln.customCurrency || false,
+        programs: ln.programs,
+        receipts: ln.receipts.map(r => ({id: r.id, name: r.name, type: r.type}))
+      }))
+    }))
+  };
+  try { localStorage.setItem('reimb-state', JSON.stringify(serial)); } catch(e) {}
+  if (!db) return;
+  const kept = new Set();
+  for (const item of state.items)
+    for (const ln of item.lines)
+      for (const r of ln.receipts)
+        if (r.id && r.data) { kept.add(r.id); await dbPut(r.id, {name:r.name, type:r.type, data:r.data}); }
+  const all = await dbAllKeys();
+  if (Array.isArray(all)) for (const k of all) if (!kept.has(k)) await dbDel(k);
+}
+
+async function loadState() {
+  const raw = localStorage.getItem('reimb-state');
+  if (!raw) return false;
+  try {
+    const d = JSON.parse(raw);
+    if (d.staff) state.staff = d.staff;
+    if (d.periodFrom) state.periodFrom = d.periodFrom;
+    if (d.periodTo) state.periodTo = d.periodTo;
+    if (d.baseCurrency) state.baseCurrency = d.baseCurrency;
+    if (d.fxRateMemory) state.fxRateMemory = d.fxRateMemory;
+    if (d.items && d.items.length > 0) {
+      state.items = [];
+      for (const id of d.items) {
+        const item = { id: id.id, name: id.name, lines: [], _subtotal: 0 };
+        for (const ld of (id.lines || [])) {
+          const ln = {
+            id: ld.id, date: ld.date, description: ld.description,
+            currency: ld.currency, fxRate: ld.fxRate, vendor: ld.vendor,
+            hasReceipt: ld.hasReceipt, receipts: [],
+            noReceiptExplanation: ld.noReceiptExplanation,
+            amount: ld.amount, account: ld.account,
+            customCurrency: ld.customCurrency || false,
+            programs: ld.programs || [{ program: '', percent: '', programOther: '' }]
+          };
+          for (const rm of (ld.receipts || [])) {
+            if (rm.id && db) {
+              const rd = await dbGet(rm.id);
+              if (rd) ln.receipts.push({ id: rm.id, name: rd.name, type: rd.type, data: rd.data });
+            }
+          }
+          item.lines.push(ln);
+        }
+        state.items.push(item);
+      }
+    }
+    return true;
+  } catch(e) { console.error('State load failed:', e); return false; }
+}
+
+function scheduleAutoSave() {
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(saveState, 1000);
 }
 
 // ========== CALCULATIONS ==========
@@ -324,8 +426,13 @@ function render() {
     ])
   ]));
 
-  // Generate button
-  wrap.appendChild(el('button', {className:'btn btn-gen', id:'gen-btn', onClick: onGenerate}, 'Generate Reimbursement Form'));
+  // Action buttons
+  const actionRow = el('div', {style:{display:'flex', gap:'12px', marginTop:'16px'}});
+  actionRow.append(
+    el('button', {className:'btn btn-save', onClick: onSave}, 'Save Reimbursement Form'),
+    el('button', {className:'btn btn-gen', id:'gen-btn', style:{flex:'1', marginTop:'0', width:'auto'}, onClick: onGenerate}, 'Generate Reimbursement Form')
+  );
+  wrap.appendChild(actionRow);
 
   app.appendChild(wrap);
   recalc();
@@ -542,6 +649,7 @@ function buildReceiptArea(ln) {
         el('button', {className:'btn btn-rm', onClick: () => {
           ln.receipts.splice(i, 1);
           area.replaceWith(buildReceiptArea(ln));
+          saveState();
         }}, '✕')
       ]));
     });
@@ -549,9 +657,10 @@ function buildReceiptArea(ln) {
     const fileIn = el('input', {type:'file', accept:'.pdf,.jpg,.jpeg,.png', style:{display:'none'}});
     fileIn.addEventListener('change', async () => {
       for (const f of fileIn.files) {
-        ln.receipts.push({ name: f.name, type: f.type, data: await f.arrayBuffer() });
+        ln.receipts.push({ id: uid(), name: f.name, type: f.type, data: await f.arrayBuffer() });
       }
       area.replaceWith(buildReceiptArea(ln));
+      saveState();
     });
     area.appendChild(el('button', {className:'btn btn-add', style:{marginTop:'4px'}, onClick: () => fileIn.click()}, '+ Add receipt'));
     area.appendChild(fileIn);
@@ -664,7 +773,7 @@ function buildProgramArea(ln) {
 }
 
 // ========== VALIDATION ==========
-function validate() {
+function validate(checkReceipts = true) {
   const errs = [];
   if (!state.staff.trim()) errs.push('Staff name is required.');
   if (!state.periodFrom || !state.periodTo) errs.push('Period dates are required.');
@@ -702,7 +811,7 @@ function validate() {
           if (Math.abs(total - 100) > 0.005) errs.push(`${lx}: Program percentages must total 100% (currently ${total.toFixed(2)}%).`);
         }
       }
-      if (ln.hasReceipt && ln.receipts.length === 0) errs.push(`${lx}: Upload at least one receipt, or select "No" for receipt.`);
+      if (checkReceipts && ln.hasReceipt && ln.receipts.length === 0) errs.push(`${lx}: Upload at least one receipt, or select "No" for receipt.`);
       if (!ln.hasReceipt && !ln.noReceiptExplanation.trim()) errs.push(`${lx}: Explain why there is no receipt.`);
     });
   });
@@ -1082,16 +1191,40 @@ async function onGenerate() {
   btn.textContent = 'Generate Reimbursement Form';
 }
 
+// ========== SAVE HANDLER ==========
+async function onSave() {
+  const valBox = $('#val-box');
+  valBox.innerHTML = '';
+  const errs = validate(false);
+  if (errs.length) {
+    const box = el('div', {className:'val-summary'});
+    box.innerHTML = '<strong>Please fix the following:</strong><br>' + errs.join('<br>');
+    valBox.appendChild(box);
+    valBox.scrollIntoView({behavior:'smooth'});
+    return;
+  }
+  await saveState();
+  await showWarningModal('The information in this reimbursement form is now saved. It will be visible next time you visit this app in <strong>the same browser on the same device.</strong> If you delete your browser history/cache, the information will be lost.');
+}
+
 // ========== INIT ==========
 async function init() {
   try {
     await loadConfig();
+    await initDB();
     state.baseCurrency = CFG['currency-base'];
     const p = defaultPeriod();
     state.periodFrom = p.from;
     state.periodTo = p.to;
-    state.items.push(newItem());
+    const hasState = await loadState();
+    if (!hasState) state.items.push(newItem());
     render();
+    document.addEventListener('input', scheduleAutoSave);
+    document.addEventListener('change', scheduleAutoSave);
+    const canSaveReceipts = !!db;
+    let entryMsg = 'This reimbursement form saves your input in the browser. As long as you do not delete your browser history/cache, the information is preserved and shown to you on the next visit in <strong>this</strong> browser.';
+    if (!canSaveReceipts) entryMsg += '<br><br>Please note that PDFs and images cannot be saved in the browser. Please do not attach receipts before you are ready to print and submit the reimbursement form.';
+    await showWarningModal(entryMsg);
   } catch (e) {
     $('#app').innerHTML = `<div class="wrap"><p style="color:var(--err)">Failed to load: ${e.message}</p></div>`;
     console.error(e);
