@@ -952,10 +952,10 @@ async function generatePDF() {
   y -= lh;
 
   // Items
-  state.items.forEach(item => {
+  state.items.forEach((item, itemIdx) => {
     // Item header
     needSpace(lh * 6); // need room for at least header + one line
-    pg.drawLine({start:{x:M.left, y:y+3}, end:{x:M.left+W, y:y+3}, thickness:0.75, color:accent});
+    if (itemIdx > 0) pg.drawLine({start:{x:M.left, y:y+3}, end:{x:M.left+W, y:y+3}, thickness:0.75, color:accent});
     pg.drawText('ITEM / PROJECT / TRAVEL', {x:M.left, y, size:sz, font:fontBold, color:accent});
     const subStr = `Subtotal: ${baseCur} ${fmtAmt(item._subtotal)}`;
     const subW = fontBold.widthOfTextAtSize(subStr, sz);
