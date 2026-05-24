@@ -991,17 +991,22 @@ async function generatePDF() {
         pg.drawLine({start:{x:M.left, y:y+lh+1}, end:{x:M.left+W, y:y+lh+1}, thickness:0.3, color:lineCol});
       }
 
-      const boxW = W * 0.65;   // text width for vendor / description
+      const boxW = W * 0.65;   // text width for description
 
-      // Line 1: Vendor   FXC amount  LCC amount
+      // Line 1: Vendor (left, truncated to fit)   [FXC amt – FXC rate per LCC]  LCC amt (right)
       const baseAmt = (() => { const a=parseFloat(ln.amount)||0, r=parseFloat(ln.fxRate)||1; return r>0?a/r:0; })();
       const baseAmtStr = `${baseCur} ${fmtAmt(baseAmt)}`;
       const baseAmtW = fontBold.widthOfTextAtSize(baseAmtStr, sz);
-      pg.drawText(truncate(ln.vendor||'–', fontBody, sz, boxW-4), {x:M.left, y, size:sz, font:fontBody, color:black});
+      let fxInlineStr = '', fxInlineW = 0;
       if (ln.currency && ln.currency !== baseCur) {
-        const fxAmtStr = `${ln.currency} ${fmtAmt(ln.amount)}`;
-        const fxAmtW = fontBody.widthOfTextAtSize(fxAmtStr, szSm);
-        pg.drawText(fxAmtStr, {x:M.left+W-baseAmtW-fxAmtW-6, y, size:szSm, font:fontBody, color:gray});
+        fxInlineStr = `${ln.currency} ${fmtAmt(ln.amount)}  –  ${ln.currency} ${parseFloat(ln.fxRate||'0').toFixed(5)} per ${baseCur}`;
+        fxInlineW = fontBody.widthOfTextAtSize(fxInlineStr, sz);
+      }
+      const rightTotalW = baseAmtW + (fxInlineW ? fxInlineW + 10 : 0);
+      const vendorMaxW = W - rightTotalW - 14;
+      pg.drawText(truncate(ln.vendor||'–', fontBody, sz, vendorMaxW), {x:M.left, y, size:sz, font:fontBody, color:black});
+      if (fxInlineStr) {
+        pg.drawText(fxInlineStr, {x:M.left+W-baseAmtW-fxInlineW-10, y, size:sz, font:fontBody, color:gray});
       }
       pg.drawText(baseAmtStr, {x:M.left+W-baseAmtW, y, size:sz, font:fontBold, color:black});
       y -= lh + 2;
@@ -1015,12 +1020,7 @@ async function generatePDF() {
       pg.drawText(dateStr, {x:M.left+W-dateStrW, y, size:szSm, font:fontBody, color:dateColor});
       y -= lh + 2;
 
-      // Line 3: Receipt ref (backfilled) or explanation   FXC rate detail (right)
-      if (ln.currency && ln.currency !== baseCur) {
-        const fxDetail = `${ln.currency} ${parseFloat(ln.fxRate||'0').toFixed(5)} per ${baseCur}`;
-        const fxDetailW = fontBody.widthOfTextAtSize(fxDetail, szSm);
-        pg.drawText(fxDetail, {x:M.left+W-fxDetailW, y, size:szSm, font:fontBody, color:gray});
-      }
+      // Line 3: Receipt ref (backfilled) or no-receipt explanation
       if (ln.hasReceipt && ln.receipts.length > 0) {
         ln.receipts.forEach((r, ri) => {
           const key = `${ln.id}-${ri}`;
