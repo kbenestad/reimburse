@@ -773,7 +773,7 @@ async function generatePDF() {
       pg.drawText('Date', {x:M.left+c1, y, size:szSm-1, font:fontBold, color:gray});
       pg.drawText('Vendor', {x:M.left+c2, y, size:szSm-1, font:fontBold, color:gray});
       pg.drawText('Currency', {x:M.left+c3, y, size:szSm-1, font:fontBold, color:gray});
-      pg.drawText('FX rate', {x:M.left+c4, y, size:szSm-1, font:fontBold, color:gray});
+      const fxLbl = 'FX rate'; pg.drawText(fxLbl, {x:M.left+W-fontBold.widthOfTextAtSize(fxLbl,szSm-1), y, size:szSm-1, font:fontBold, color:gray});
       y -= lh;
       // Row 1 values
       const dateInPeriod = isDateInPeriod(ln.date);
@@ -789,7 +789,7 @@ async function generatePDF() {
       // Row 2 labels: Description | Receipt | Amount
       pg.drawText('Description', {x:M.left, y, size:szSm-1, font:fontBold, color:gray});
       pg.drawText('Receipt', {x:M.left+c3, y, size:szSm-1, font:fontBold, color:gray});
-      pg.drawText('Amount', {x:M.left+c4, y, size:szSm-1, font:fontBold, color:gray});
+      const amtLbl = 'Amount'; pg.drawText(amtLbl, {x:M.left+W-fontBold.widthOfTextAtSize(amtLbl,szSm-1), y, size:szSm-1, font:fontBold, color:gray});
       y -= lh;
       // Row 2 values
       pg.drawText(truncate(ln.description, fontBody, sz, (c3)-8), {x:M.left, y, size:sz, font:fontBody, color:black});
