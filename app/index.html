@@ -956,8 +956,8 @@ async function generatePDF() {
     // Item header
     needSpace(lh * 7); // need room for separator gap + header + one line
     if (itemIdx > 0) {
-      y -= lh;  // create gap below previous item before drawing separator
-      pg.drawLine({start:{x:M.left, y:y+lh}, end:{x:M.left+W, y:y+lh}, thickness:0.75, color:accent});
+      pg.drawLine({start:{x:M.left, y}, end:{x:M.left+W, y}, thickness:0.75, color:accent});
+      y -= lh;  // space between separator and item header text
     }
     pg.drawText('ITEM / PROJECT / TRAVEL', {x:M.left, y, size:sz, font:fontBold, color:accent});
     const subStr = `Subtotal: ${baseCur} ${fmtAmt(item._subtotal)}`;
