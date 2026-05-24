@@ -1221,13 +1221,11 @@ async function onNewForm() {
   const confirmed = await showConfirmModal('This will clear all current form data and start a fresh form.<br><br>Are you sure you want to continue?');
   if (!confirmed) return;
   try { localStorage.removeItem('reimb-state'); } catch(e) {}
-  try { localStorage.removeItem('reimb-staff'); } catch(e) {}
   if (db) {
     const keys = await dbAllKeys();
     if (Array.isArray(keys)) for (const k of keys) await dbDel(k);
   }
   const p = defaultPeriod();
-  state.staff = '';
   state.periodFrom = p.from;
   state.periodTo = p.to;
   state.baseCurrency = CFG['currency-base'];
