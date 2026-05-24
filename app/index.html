@@ -80,7 +80,7 @@ textarea { resize: vertical; min-height: 48px; width: 100%; }
 
 /* Tooltip */
 .tip { position: relative; cursor: help; }
-.tip::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 5px 9px; border-radius: 4px; font-size: 11px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .15s; }
+.tip::after { content: attr(data-tip); position: absolute; top: calc(100% + 6px); left: 0; background: #333; color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 11px; line-height: 1.45; white-space: normal; max-width: 280px; z-index: 100; opacity: 0; pointer-events: none; transition: opacity .15s; }
 .tip:hover::after { opacity: 1; }
 
 /* Validation summary */
@@ -173,7 +173,7 @@ function newLine() {
   return {
     id: uid(), date: state.periodFrom || '', description: '', currency: state.baseCurrency,
     fxRate: '1.00000', vendor: '', hasReceipt: true, receipts: [],
-    noReceiptExplanation: '', amount: '', account: '',
+    noReceiptExplanation: '', amount: '', account: '', customCurrency: false,
     programs: [{ program: '', percent: '', programOther: '' }]
   };
 }
@@ -196,6 +196,17 @@ function recalc() {
   state._grandTotal = grand;
   const ge = $('#grand-total');
   if (ge) ge.textContent = `${state.baseCurrency} ${fmtAmt(grand)}`;
+}
+
+// ========== CURRENCY HELPERS ==========
+function getCurrencyName(code) {
+  const c = (CFG.currencies || []).find(c => c.code === code);
+  return c ? c.name : code;
+}
+function buildFxTip(code, base) {
+  if (!code || code === base || code.length < 3) return '';
+  const fn = getCurrencyName(code), bn = getCurrencyName(base);
+  return `Enter the exchange rate expressed as the amount of ${fn} you pay for 1 ${bn}. E.g., XX.XX ${fn} per 1 ${bn} if your expense was in ${fn} and you submit your reimbursement form in ${bn}.`;
 }
 
 // ========== CURRENCY DROPDOWN ==========
@@ -384,9 +395,8 @@ function renderLine(ln, item) {
   const vendIn = el('input', {type:'text', value: ln.vendor, placeholder:'Vendor name'});
   vendIn.addEventListener('input', () => { ln.vendor = vendIn.value; });
 
-  const curDD = makeCDD(currencies, ln.currency, code => {
-    ln.currency = code;
-    fxIn.dataset.tip = `Units of ${code} per 1 ${baseCur}`;
+  function applyFxCurrency(code) {
+    fxIn.dataset.tip = buildFxTip(code, baseCur);
     if (code === baseCur) {
       ln.fxRate = '1.00000'; fxIn.value = '1.00000'; fxIn.readOnly = true;
     } else {
@@ -397,12 +407,64 @@ function renderLine(ln, item) {
     }
     recalc();
     if (progAreaEl) progAreaEl._refresh();
+  }
+
+  const currenciesWithOther = [...currencies, {code: '__OTHER__', name: 'Other (enter ISO code)'}];
+  const curDD = makeCDD(currenciesWithOther, ln.customCurrency ? '__OTHER__' : ln.currency, code => {
+    if (code === '__OTHER__') {
+      ln.customCurrency = true;
+      ln.currency = '';
+      curDD.style.display = 'none';
+      otherCurWrap.style.display = 'flex';
+      ln.fxRate = ''; fxIn.value = ''; fxIn.readOnly = false; fxIn.dataset.tip = '';
+      recalc(); if (progAreaEl) progAreaEl._refresh();
+      otherCurIn.focus();
+    } else {
+      ln.customCurrency = false;
+      ln.currency = code;
+      applyFxCurrency(code);
+    }
+  });
+  if (ln.customCurrency) curDD.style.display = 'none';
+
+  const otherCurIn = el('input', {type:'text', maxlength:'3', placeholder:'e.g. THB',
+    style:{width:'70px', textTransform:'uppercase', letterSpacing:'1px', fontFamily:'inherit'}});
+  otherCurIn.className = 'tip';
+  otherCurIn.dataset.tip = 'You have selected other currency. Please insert the three-letter ISO code (THB for Thai baht, USD for US dollars).';
+  if (ln.customCurrency && ln.currency) otherCurIn.value = ln.currency;
+  otherCurIn.addEventListener('input', () => {
+    const val = otherCurIn.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
+    otherCurIn.value = val;
+    ln.currency = val;
+    if (val.length === 3) {
+      applyFxCurrency(val);
+    } else {
+      ln.fxRate = ''; fxIn.value = ''; fxIn.readOnly = false; fxIn.dataset.tip = '';
+      recalc(); if (progAreaEl) progAreaEl._refresh();
+    }
   });
 
-  const fxIn = el('input', {type:'text', value: ln.fxRate, style:{width:'120px', textAlign:'right'}, placeholder:'0.00000'});
-  fxIn.readOnly = ln.currency === baseCur;
+  const cancelOtherBtn = el('button', {type:'button', className:'btn btn-rm', style:{padding:'2px 6px', fontSize:'12px'}}, '×');
+  cancelOtherBtn.addEventListener('click', () => {
+    ln.customCurrency = false;
+    ln.currency = baseCur;
+    otherCurWrap.style.display = 'none';
+    curDD.style.display = '';
+    curDD._setValue(baseCur);
+    applyFxCurrency(baseCur);
+  });
+
+  const otherCurWrap = el('div', {style:{gap:'4px', alignItems:'center', display: ln.customCurrency ? 'flex' : 'none'}});
+  otherCurWrap.append(otherCurIn, cancelOtherBtn);
+
+  const curWrap = el('div');
+  curWrap.append(curDD, otherCurWrap);
+
+  const fxIn = el('input', {type:'text', style:{width:'120px', textAlign:'right'}, placeholder:'0.00000'});
+  fxIn.value = ln.fxRate;
+  fxIn.readOnly = !ln.customCurrency && ln.currency === baseCur;
   fxIn.className = 'tip';
-  fxIn.dataset.tip = `Units of ${ln.currency || '?'} per 1 ${baseCur}`;
+  fxIn.dataset.tip = buildFxTip(ln.currency, baseCur);
   fxIn.addEventListener('input', () => {
     ln.fxRate = fxIn.value;
     const rate = parseFloat(fxIn.value);
@@ -414,7 +476,7 @@ function renderLine(ln, item) {
   blk.appendChild(el('div', {className:'frow'}, [
     el('div', {className:'fgrp'}, [el('label', null, 'Date'), dateIn]),
     el('div', {className:'fgrp grow'}, [el('label', null, 'Vendor'), vendIn]),
-    el('div', {className:'fgrp'}, [el('label', null, 'Currency'), curDD]),
+    el('div', {className:'fgrp'}, [el('label', null, 'Currency'), curWrap]),
     el('div', {className:'fgrp'}, [el('label', null, 'FX rate'), fxIn]),
   ]));
 
