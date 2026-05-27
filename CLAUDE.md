@@ -1,5 +1,7 @@
 # Reimbursement Form — Agent Reference
 
+> **Custom build** for [Boat People SOS](https://bpsos.org) and People Serving People Foundation. This branch (`bpsos-customisation`) contains org-specific configuration and any customisations made for those organisations.
+
 Static browser app that collects expense data via a form UI and generates a PDF with attached receipts. No server, no build step — one HTML file + config.yml + optional logo.
 
 ## Repository layout
