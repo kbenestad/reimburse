@@ -4,6 +4,12 @@ This guide is for the person responsible for deploying and configuring the reimb
 
 ---
 
+> Copyright 2026 Kristian Benestad. Licensed under the Apache License, Version 2.0. See LICENSE for more information.
+>
+> This is a custom build of kbenestad/reimburse for Boat People SOS and People Serving People Foundation.
+
+---
+
 ## Architecture
 
 The application is a static web app — a single HTML file that loads a YAML configuration file at runtime. There is no server-side logic, no database, and no build step.

@@ -4,6 +4,12 @@ This guide is for staff submitting expense reimbursement claims.
 
 ---
 
+> Copyright 2026 Kristian Benestad. Licensed under the Apache License, Version 2.0. See LICENSE for more information.
+>
+> This is a custom build of kbenestad/reimburse for Boat People SOS and People Serving People Foundation.
+
+---
+
 ## Overview
 
 The reimbursement form runs in your browser. You fill in your expenses, attach receipts, and click one button to download a PDF. No account, login, or internet upload is needed — the PDF is generated entirely on your device.

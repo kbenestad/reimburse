@@ -4,6 +4,12 @@ This guide is for developers who want to fork, extend, or modify the reimburseme
 
 ---
 
+> Copyright 2026 Kristian Benestad. Licensed under the Apache License, Version 2.0. See LICENSE for more information.
+>
+> This is a custom build of kbenestad/reimburse for Boat People SOS and People Serving People Foundation.
+
+---
+
 ## Repository layout
 
 ```
