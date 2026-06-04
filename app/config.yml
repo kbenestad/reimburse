@@ -55,6 +55,16 @@ accounts:
   - "3000 - Office Supplies"
   - "4000 - Professional Services"
 
+# About modal (shown when "About" is clicked in the footer)
+about-title: "About This Form"
+about-button: "Close"
+about-content: |
+  This reimbursement form lets you collect expense data and generate a PDF with attached receipts.
+
+  **Documentation:** [docs.benestad.net](https://docs.benestad.net/invoice)
+
+  **Source code:** [kbenestad/reimburse](https://github.com/kbenestad/reimburse)
+
 # Programs (shown in dropdown — "Other" adds a text field)
 programs:
   - "General Operations"

@@ -98,10 +98,34 @@ textarea { resize: vertical; min-height: 48px; width: 100%; }
   .frow { flex-direction: column; gap: 10px; }
   .form-hdr { flex-direction: column; gap: 8px; }
 }
+
+/* App footer */
+.app-footer { text-align: center; padding: 18px 16px; font-size: 12px; color: var(--muted); }
+.app-footer a { color: var(--muted); text-decoration: none; }
+.app-footer a:hover { color: var(--accent); text-decoration: underline; }
+.app-footer .sep { margin: 0 6px; opacity: .5; }
+
+/* About modal prose */
+.about-body h1,.about-body h2,.about-body h3 { font-size: 14px; font-weight: 700; margin: 12px 0 4px; color: var(--accent); }
+.about-body p { margin: 0 0 10px; }
+.about-body ul { margin: 0 0 10px 18px; }
+.about-body li { margin-bottom: 3px; }
+.about-body a { color: var(--accent); }
+.about-body strong { font-weight: 700; }
+.about-body em { font-style: italic; }
 </style>
 </head>
 <body>
 <div id="app"><p class="loading">Loading configuration…</p></div>
+<footer class="app-footer">
+  <span>© 2026 Kristian Benestad</span>
+  <span class="sep">•</span>
+  <a href="https://docs.benestad.net/invoice" target="_blank" rel="noopener">docs.benestad.net</a>
+  <span class="sep">•</span>
+  <a href="https://github.com/kbenestad/reimburse" target="_blank" rel="noopener">kbenestad/reimburse</a>
+  <span class="sep">•</span>
+  <a href="#" id="about-link">About</a>
+</footer>
 
 <script>
 (async function() {
@@ -182,6 +206,44 @@ function showWarningModal(msg) {
     document.body.appendChild(overlay);
     okBtn.focus();
   });
+}
+
+function mdToHtml(md) {
+  if (!md) return '';
+  let html = md
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/^#{3}\s+(.+)$/gm, '<h3>$1</h3>')
+    .replace(/^#{2}\s+(.+)$/gm, '<h2>$1</h2>')
+    .replace(/^#{1}\s+(.+)$/gm, '<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  // Lists
+  html = html.replace(/((?:^- .+\n?)+)/gm, m => '<ul>' + m.replace(/^- (.+)$/gm, '<li>$1</li>') + '</ul>');
+  // Paragraphs (blocks not already wrapped in a tag)
+  html = html.split(/\n{2,}/).map(b => b.trim()).filter(Boolean).map(b => /^<[hul]/.test(b) ? b : `<p>${b.replace(/\n/g, '<br>')}</p>`).join('\n');
+  return html;
+}
+
+function showAboutModal() {
+  const title = (CFG && CFG['about-title']) || 'About';
+  const content = (CFG && CFG['about-content']) || '';
+  const btnLabel = (CFG && CFG['about-button']) || 'Close';
+  const overlay = el('div', {style:{position:'fixed',top:'0',right:'0',bottom:'0',left:'0',background:'rgba(0,0,0,.45)',zIndex:'9999',display:'flex',alignItems:'center',justifyContent:'center'}});
+  const box = el('div', {style:{background:'#fff',borderRadius:'8px',padding:'24px 28px',maxWidth:'480px',width:'90%',maxHeight:'80vh',overflowY:'auto',boxShadow:'0 8px 32px rgba(0,0,0,.25)'}});
+  const hdr = el('div', {style:{marginBottom:'16px'}});
+  hdr.appendChild(el('strong', {style:{fontSize:'16px',color:'var(--accent)'}}, title));
+  const body = el('div', {className:'about-body', style:{fontSize:'13px',lineHeight:'1.65',color:'var(--text)',marginBottom:'20px'}});
+  body.innerHTML = mdToHtml(content);
+  const foot = el('div', {style:{display:'flex',justifyContent:'flex-end'}});
+  const closeBtn = el('button', {className:'btn btn-gen', style:{width:'auto',padding:'8px 28px',marginTop:'0'}}, btnLabel);
+  closeBtn.addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  foot.appendChild(closeBtn);
+  box.append(hdr, body, foot);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  closeBtn.focus();
 }
 
 
@@ -1297,6 +1359,9 @@ async function init() {
     console.error(e);
   }
 }
+
+const aboutLink = document.getElementById('about-link');
+if (aboutLink) aboutLink.addEventListener('click', e => { e.preventDefault(); showAboutModal(); });
 
 init();
 })();
