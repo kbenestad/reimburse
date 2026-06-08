@@ -866,14 +866,14 @@ function render() {
   actCard.appendChild(totals);
 
   const actionRow = el('div', {style:{display:'flex', gap:'10px', marginTop:'16px'}});
+  const actionFeedback = el('div', {style:{marginTop:'10px'}});
 
-  const saveBtn = el('button', {className:'kb-btn kb-btn--ghost', style:{flex:'0 0 20%'}, onClick: onSave}, 'Save');
+  const saveBtn = el('button', {className:'kb-btn kb-btn--ghost', style:{flex:'0 0 20%'}}, 'Save');
+  saveBtn.addEventListener('click', () => saveState());
 
-  const validateBtn = el('button', {className:'kb-btn kb-btn--ghost', style:{flex:'0 0 20%'}});
-  validateBtn.textContent = 'Validate';
+  const validateBtn = el('button', {className:'kb-btn kb-btn--ghost', style:{flex:'0 0 20%'}}, 'Validate');
   validateBtn.addEventListener('click', () => {
-    const valBox = $('#val-box');
-    valBox.innerHTML = '';
+    actionFeedback.innerHTML = '';
     const errs = validate();
     if (errs.length) {
       const note = el('div', {className:'kb-note kb-note--error'});
@@ -881,13 +881,11 @@ function render() {
       const txt = el('div');
       txt.innerHTML = '<strong>Please fix the following:</strong><br>' + errs.join('<br>');
       note.appendChild(txt);
-      valBox.appendChild(note);
-      valBox.scrollIntoView({behavior:'smooth'});
+      actionFeedback.appendChild(note);
     } else {
       const note = el('div', {className:'kb-note kb-note--success'});
       note.innerHTML = `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.061L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg><div><strong>All good.</strong> The form is ready to download.</div>`;
-      valBox.appendChild(note);
-      valBox.scrollIntoView({behavior:'smooth'});
+      actionFeedback.appendChild(note);
     }
   });
 
@@ -895,7 +893,7 @@ function render() {
   genBtn.innerHTML = `<svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16"><path d="M8 1a1 1 0 0 1 1 1v6.6l2.3-2.3a1 1 0 0 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 1.4-1.4L7 8.6V2a1 1 0 0 1 1-1zM3 13h10a1 1 0 1 1 0 2H3a1 1 0 1 1 0-2z"/></svg>Download reimbursement form`;
 
   actionRow.append(saveBtn, validateBtn, genBtn);
-  actCard.appendChild(actionRow);
+  actCard.append(actionRow, actionFeedback);
   wrap.appendChild(actCard);
 
   app.appendChild(wrap);
