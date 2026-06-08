@@ -111,7 +111,7 @@ body{
 .kb-wrap{max-width:960px;margin:0 auto;padding:24px 20px 56px;}
 
 /* ── Toolbar ──────────────────────────────────────────────────────────────── */
-.kb-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.kb-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;padding-right:2px;}
 .kb-toolbar .spacer{flex:1;}
 .kb-seg{
   display:inline-flex;align-items:center;gap:2px;
@@ -937,10 +937,12 @@ function renderLine(ln, item) {
   // Canonical: ln.fxRate is always "foreign per 1 base" (divide to get base amount).
   // ln.fxDir controls display direction: 'foreign' = show canonical, 'base' = show 1/canonical.
   const fxIn = el('input', {className:'kb-input num', type:'text', placeholder:'0.00000', style:{minWidth:'0', width:'90px'}});
-  const fxDirSel = el('select', {className:'kb-select', style:{padding:'0 20px 0 6px', fontSize:'var(--fs-small)', minWidth:'0', width:'auto'}});
+  const fxDirContainer = el('div', {style:{display:'inline-block'}});
   const fxPerLbl = el('span', {style:{fontSize:'var(--fs-small)', color:'var(--text-muted)', whiteSpace:'nowrap', userSelect:'none'}});
   const fxWrap = el('div', {style:{display:'flex', alignItems:'center', gap:'4px'}});
-  fxWrap.append(fxIn, fxDirSel, fxPerLbl);
+  fxWrap.append(fxIn, fxDirContainer, fxPerLbl);
+
+  let fxDirDD = null;
 
   function fxDisplayVal() {
     if (!ln.fxRate || ln.fxRate === '' || ln.fxRate === '1.00000') return ln.fxRate;
@@ -955,16 +957,22 @@ function renderLine(ln, item) {
   }
   function rebuildFxDirSel() {
     const fcy = ln.currency || '???';
-    fxDirSel.innerHTML = '';
-    fxDirSel.append(
-      el('option', {value:'foreign'}, fcy),
-      el('option', {value:'base'}, baseCur)
-    );
-    fxDirSel.value = ln.fxDir || 'foreign';
-    fxPerLbl.textContent = 'per ' + (fxDirSel.value === 'foreign' ? baseCur : fcy);
+    const initCode = ln.fxDir === 'base' ? baseCur : fcy;
+    const opts = [
+      {code: fcy, name: getCurrencyName(fcy) || fcy},
+      {code: baseCur, name: getCurrencyName(baseCur) || baseCur}
+    ];
+    fxDirDD = makeCDD(opts, initCode, code => {
+      ln.fxDir = code === baseCur ? 'base' : 'foreign';
+      fxIn.value = fxDisplayVal();
+      fxPerLbl.textContent = 'per ' + (ln.fxDir === 'foreign' ? baseCur : ln.currency || '???');
+    });
+    fxDirContainer.innerHTML = '';
+    fxDirContainer.appendChild(fxDirDD);
+    fxPerLbl.textContent = 'per ' + (ln.fxDir === 'foreign' ? baseCur : fcy);
   }
   function showFxControls(show) {
-    fxDirSel.style.display = show ? '' : 'none';
+    fxDirContainer.style.display = show ? '' : 'none';
     fxPerLbl.style.display = show ? '' : 'none';
   }
 
@@ -979,12 +987,6 @@ function renderLine(ln, item) {
     if (ln.currency && ln.currency !== baseCur && rate > 0) state.fxRateMemory[ln.currency] = ln.fxRate;
     recalc();
     if (progAreaEl) progAreaEl._refresh();
-  });
-
-  fxDirSel.addEventListener('change', () => {
-    ln.fxDir = fxDirSel.value;
-    fxIn.value = fxDisplayVal();
-    fxPerLbl.textContent = 'per ' + (ln.fxDir === 'foreign' ? baseCur : ln.currency || '???');
   });
 
   async function showFxModal(code) {
