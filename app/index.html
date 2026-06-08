@@ -332,12 +332,23 @@ body{
 .kb-footer a:hover{color:var(--accent);text-decoration:underline;}
 .kb-footer .sep{opacity:.45;}
 
-/* ── App bar ──────────────────────────────────────────────────────────────── */
-.app-bar{
-  height:34px;display:flex;align-items:center;padding:0 20px;
-  border-bottom:1px solid var(--border);background:var(--surface);
+/* ── App wordmark (toolbar left) ──────────────────────────────────────────── */
+.app-wordmark{
+  display:inline-flex;align-items:center;gap:6px;
+  font:600 var(--fs-small)/1 var(--font-sans);
+  color:var(--text-muted);letter-spacing:-0.01em;user-select:none;
 }
-.app-bar svg{width:16px;height:16px;color:var(--text-muted);opacity:.5;}
+.app-wordmark svg{width:14px;height:14px;flex:0 0 14px;opacity:.75;}
+/* Language select in toolbar */
+.kb-toolbar-sel{
+  font:600 var(--fs-small)/1 var(--font-sans);color:var(--text-muted);
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:5px 24px 5px 9px;
+  outline:none;appearance:none;cursor:pointer;transition:border-color .14s,box-shadow .14s;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16' fill='none' stroke='%235F6975' stroke-width='1.6'><path d='M4 6l4 4 4-4'/></svg>");
+  background-repeat:no-repeat;background-position:right 7px center;
+}
+.kb-toolbar-sel:focus{border-color:var(--accent);box-shadow:var(--ring);}
 
 /* ── Loading ──────────────────────────────────────────────────────────────── */
 .kb-loading{text-align:center;padding:80px;color:var(--text-muted);}
@@ -352,13 +363,7 @@ body{
 </style>
 </head>
 <body>
-<header class="app-bar" aria-hidden="true">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="7.5" y="14" width="33" height="20" rx="3.2" stroke-width="2.8"/>
-    <circle cx="24" cy="24" r="4.6" stroke-width="2.6"/>
-    <path d="M12.7 21.4V26.6M35.3 21.4V26.6" stroke-width="2.6"/>
-  </svg>
-</header>
+
 <div id="app"><p class="kb-loading">Loading configuration…</p></div>
 <footer class="kb-footer">
   <span>© 2026 Kristian Benestad</span>
@@ -699,7 +704,24 @@ function render() {
 
   // ── Toolbar ──────────────────────────────────────────────────────────────
   const toolbar = el('div', {className:'kb-toolbar'});
+
+  // Wordmark (glyph + "reimburse")
+  const wordmark = el('div', {className:'app-wordmark'});
+  wordmark.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="7.5" y="14" width="33" height="20" rx="3.2" stroke-width="2.8"/><circle cx="24" cy="24" r="4.6" stroke-width="2.6"/><path d="M12.7 21.4V26.6M35.3 21.4V26.6" stroke-width="2.6"/></svg>reimburse`;
+  toolbar.appendChild(wordmark);
   toolbar.appendChild(el('div', {className:'spacer'}));
+
+  // Language selector (only when CFG.languages has >1 entry)
+  if (Array.isArray(CFG.languages) && CFG.languages.length > 1) {
+    const langSel = el('select', {className:'kb-toolbar-sel', 'aria-label':'Language'});
+    CFG.languages.forEach(lang => {
+      const code = typeof lang === 'object' ? lang.code : lang;
+      const name = typeof lang === 'object' ? lang.name : lang;
+      const opt = el('option', {value: code}, name);
+      langSel.appendChild(opt);
+    });
+    toolbar.appendChild(langSel);
+  }
 
   // Font size
   const sizeSeg = el('div', {className:'kb-seg', role:'group', 'aria-label':'Text size'});
@@ -716,26 +738,21 @@ function render() {
   });
   toolbar.appendChild(sizeSeg);
 
-  // Theme toggle
-  const themeSeg = el('div', {className:'kb-seg', role:'group', 'aria-label':'Colour theme'});
-  const savedTheme = localStorage.getItem('reimb-theme');
-  [{lbl:'Auto', val:null}, {lbl:'Light', val:'light'}, {lbl:'Dark', val:'dark'}].forEach(t => {
-    const isActive = savedTheme === t.val || (!savedTheme && t.val === null);
-    const btn = el('button', {type:'button', className: isActive ? 'is-active' : ''}, t.lbl);
-    btn.addEventListener('click', () => {
-      $$('button', themeSeg).forEach(b => b.classList.remove('is-active'));
-      btn.classList.add('is-active');
-      if (t.val) {
-        document.documentElement.setAttribute('data-theme', t.val);
-        localStorage.setItem('reimb-theme', t.val);
-      } else {
-        document.documentElement.removeAttribute('data-theme');
-        localStorage.removeItem('reimb-theme');
-      }
-    });
-    themeSeg.appendChild(btn);
+  // Theme toggle (single icon button: moon = light mode, sun = dark mode)
+  const themeBtn = el('button', {className:'kb-iconbtn', type:'button', 'aria-label':'Toggle theme'});
+  const moonSVG = `<svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16"><path d="M6 1a7 7 0 1 0 7 7 5.5 5.5 0 0 1-7-7z"/></svg>`;
+  const sunSVG  = `<svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16"><circle cx="8" cy="8" r="3"/><g stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="8" y1="1" x2="8" y2="3"/><line x1="8" y1="13" x2="8" y2="15"/><line x1="1" y1="8" x2="3" y2="8"/><line x1="13" y1="8" x2="15" y2="8"/><line x1="3.05" y1="3.05" x2="4.46" y2="4.46"/><line x1="11.54" y1="11.54" x2="12.95" y2="12.95"/><line x1="12.95" y1="3.05" x2="11.54" y2="4.46"/><line x1="4.46" y1="11.54" x2="3.05" y2="12.95"/></g></svg>`;
+  const currentTheme = () => document.documentElement.getAttribute('data-theme') ||
+    (window.matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+  const updateThemeBtn = () => { themeBtn.innerHTML = currentTheme() === 'dark' ? sunSVG : moonSVG; };
+  updateThemeBtn();
+  themeBtn.addEventListener('click', () => {
+    const next = currentTheme() === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('reimb-theme', next);
+    updateThemeBtn();
   });
-  toolbar.appendChild(themeSeg);
+  toolbar.appendChild(themeBtn);
 
   // About
   const aboutBtn = el('button', {className:'kb-iconbtn', type:'button', 'aria-label':'About', onClick: showAboutModal});
