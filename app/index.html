@@ -3,122 +3,356 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Reimbursement Form</title>
+<meta name="format-detection" content="telephone=no">
+<title>Reimbursement</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="assets/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <script src="https://unpkg.com/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+<script>
+  (function(){var t=localStorage.getItem('reimb-theme');if(t)document.documentElement.setAttribute('data-theme',t);})();
+</script>
 <style>
-:root { --accent: #1a3a5c; --bg: #f5f6f8; --card: #fff; --text: #222; --muted: #666; --border: #d0d4da; --err: #c62828; }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
-.wrap { max-width: 920px; margin: 24px auto; background: var(--card); border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,.08); padding: 32px; }
-.loading { text-align: center; padding: 80px; color: var(--muted); }
-
-/* Header */
-.form-hdr { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
-.form-hdr .logo img { max-height: 56px; }
-.form-hdr .logo .org-name { font-size: 18px; font-weight: 700; color: var(--accent); }
-.form-hdr .title { font-size: 18px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .5px; text-align: right; }
-
-/* Field rows */
-.frow { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
-.fgrp { display: flex; flex-direction: column; min-width: 120px; }
-.fgrp.grow { flex: 1; }
-.fgrp label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; letter-spacing: .3px; }
-input, select, textarea { padding: 7px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; font-family: inherit; background: #fff; }
-input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(26,58,92,.1); }
-input[readonly] { background: #f0f1f3; color: var(--muted); }
-textarea { resize: vertical; min-height: 48px; width: 100%; }
-.input-err { border-color: var(--err) !important; }
-.input-warn { border-color: #e65100 !important; background: #fff8f0 !important; }
-
-/* Divider */
-.divider { border: none; border-top: 2px solid var(--accent); margin: 20px 0; }
-.divider-light { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
-
-/* Item block */
-.item-blk { border: 1px solid var(--border); border-radius: 6px; padding: 20px; margin-bottom: 16px; background: #fafbfc; position: relative; }
-.item-hdr { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 2px; }
-.item-hdr label { font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--accent); white-space: nowrap; }
-.item-subtotal-row { display: flex; justify-content: flex-end; margin-bottom: 4px; }
-.item-subtotal { font-weight: 600; font-size: 14px; white-space: nowrap; color: var(--accent); }
-.item-name { width: 100%; box-sizing: border-box; }
-
-/* Line block */
-.line-blk { padding: 12px 0; }
-.line-blk + .line-blk { border-top: 1px dashed var(--border); }
-
-/* Buttons */
-.btn { padding: 7px 14px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; font-family: inherit; }
-.btn-add { background: transparent; color: var(--accent); border: 1px dashed var(--accent); }
-.btn-add:hover { background: rgba(26,58,92,.04); }
-.btn-rm { background: transparent; color: var(--err); font-size: 12px; padding: 4px 8px; }
-.btn-rm:hover { text-decoration: underline; }
-.btn-gen { background: var(--accent); color: #fff; font-size: 15px; padding: 12px 32px; width: 100%; margin-top: 16px; border-radius: 6px; }
-.btn-gen:hover { opacity: .9; }
-.btn-gen:disabled { opacity: .5; cursor: not-allowed; }
-.btn-save { background: #2e7d32; color: #fff; font-size: 15px; padding: 12px 32px; border-radius: 6px; }
-.btn-save:hover { opacity: .9; }
-
-/* Totals */
-.totals-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; }
-.grand-total { font-size: 17px; font-weight: 700; color: var(--accent); }
-
-/* Receipt area */
-.receipt-area { margin-top: 6px; padding: 8px 10px; background: #eef1f5; border-radius: 4px; }
-.receipt-file { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 13px; }
-.receipt-file .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* Custom currency dropdown */
-.cdd { position: relative; display: inline-block; }
-.cdd-trigger { padding: 7px 10px; border: 1px solid var(--border); border-radius: 4px; background: #fff; cursor: pointer; font-size: 14px; font-family: inherit; text-align: left; min-width: 70px; }
-.cdd-trigger:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(26,58,92,.1); }
-.cdd-panel { display: none; position: absolute; top: calc(100% + 2px); left: 0; background: #fff; border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 6px 20px rgba(0,0,0,.14); z-index: 100; min-width: 220px; max-height: 260px; overflow-y: auto; }
-.cdd-panel.open { display: block; }
-.cdd-opt { padding: 8px 12px; cursor: pointer; }
-.cdd-opt:hover { background: #eef1f5; }
-.cdd-opt .code { font-weight: 600; font-size: 14px; }
-.cdd-opt .name { font-size: 11px; color: var(--muted); }
-.cdd-opt + .cdd-opt { border-top: 1px solid #eee; }
-
-/* Tooltip */
-.tip { position: relative; cursor: help; }
-.tip::after { content: attr(data-tip); position: absolute; top: calc(100% + 6px); left: 0; background: #333; color: #fff; padding: 6px 10px; border-radius: 4px; font-size: 11px; line-height: 1.45; white-space: normal; max-width: 280px; z-index: 100; opacity: 0; pointer-events: none; transition: opacity .15s; }
-.tip:hover::after { opacity: 1; }
-
-/* Validation summary */
-.val-summary { background: #fce4e4; border: 1px solid var(--err); border-radius: 6px; padding: 14px 18px; margin-bottom: 16px; color: var(--err); font-size: 13px; line-height: 1.7; }
-
-@media (max-width: 640px) {
-  .wrap { margin: 8px; padding: 16px; }
-  .frow { flex-direction: column; gap: 10px; }
-  .form-hdr { flex-direction: column; gap: 8px; }
+/* ── Fonts ────────────────────────────────────────────────────────────────── */
+@font-face {
+  font-family:"Schibsted Grotesk";font-style:normal;font-weight:400 800;font-display:swap;
+  src:local("Schibsted Grotesk"),url("https://fonts.bunny.net/schibsted-grotesk/files/schibsted-grotesk-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family:"JetBrains Mono";font-style:normal;font-weight:400 600;font-display:swap;
+  src:local("JetBrains Mono"),url("https://fonts.bunny.net/jetbrains-mono/files/jetbrains-mono-latin-500-normal.woff2") format("woff2");
 }
 
-/* App footer */
-.app-footer { text-align: left; padding: 18px 16px; max-width: 920px; margin: 0 auto; font-size: 12px; color: var(--muted); }
-.app-footer a { color: var(--muted); text-decoration: none; }
-.app-footer a:hover { color: var(--accent); text-decoration: underline; }
-.app-footer .sep { margin: 0 6px; opacity: .5; }
+/* ── Tokens (light) ───────────────────────────────────────────────────────── */
+:root {
+  --font-sans:"Schibsted Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --font-scale:1;
+  --fs-base:calc(15px * var(--font-scale));
+  --fs-input:calc(15px * var(--font-scale));
+  --fs-label:calc(12px * var(--font-scale));
+  --fs-title:calc(13px * var(--font-scale));
+  --fs-small:calc(12.5px * var(--font-scale));
+  --fs-h1:calc(22px * var(--font-scale));
+
+  --accent:#2F6FED;
+  --accent-hover:#1F57CF;
+  --accent-soft:#EEF3FE;
+  --accent-border:#C7D9FB;
+  --on-accent:#FFFFFF;
+
+  --bg:#F4F6F9;
+  --surface:#FFFFFF;
+  --surface-2:#F8F9FB;
+  --surface-3:#F1F3F6;
+  --border:#E3E7EE;
+  --border-strong:#D3D9E2;
+  --text:#14181E;
+  --text-soft:#3A434F;
+  --text-muted:#5F6975;
+  --placeholder:#9AA3AF;
+
+  --danger:#D64545;--danger-soft:#FBEAEA;--danger-border:#F0C9C9;
+  --warning:#C9851F;--warning-soft:#FBF1DD;--warning-border:#EED9AD;
+  --success:#1F9D5F;--success-soft:#E2F3EA;--success-border:#BFE3CF;
+  --info:#2F6FED;--info-soft:#EEF3FE;--info-border:#C7D9FB;
+
+  --radius:8px;
+  --radius-sm:6px;
+  --radius-pill:999px;
+  --shadow-sm:0 1px 2px rgba(20,24,30,.05);
+  --shadow:0 6px 22px rgba(20,24,30,.08);
+  --ring:0 0 0 3px rgba(47,111,237,.20);
+  color-scheme:light;
+}
+
+/* ── Dark mode ────────────────────────────────────────────────────────────── */
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --accent:#5685E9;--accent-hover:#6C98EF;--accent-soft:#16233F;--accent-border:#21386A;
+    --bg:#0D1117;--surface:#161B22;--surface-2:#1C232C;--surface-3:#1C232C;
+    --border:#232A33;--border-strong:#2D3641;
+    --text:#EEF1F5;--text-soft:#C2CAD3;--text-muted:#8B95A1;--placeholder:#6F7986;
+    --danger:#E06464;--danger-soft:#341819;--danger-border:#5A2A2A;
+    --warning:#D99A3A;--warning-soft:#33270F;--warning-border:#574017;
+    --success:#3BB97A;--success-soft:#13301F;--success-border:#1F4D33;
+    --info:#88ABF2;--info-soft:#16233F;--info-border:#21386A;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.4);--shadow:0 8px 28px rgba(0,0,0,.5);
+    --ring:0 0 0 3px rgba(86,133,233,.32);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --accent:#5685E9;--accent-hover:#6C98EF;--accent-soft:#16233F;--accent-border:#21386A;
+  --bg:#0D1117;--surface:#161B22;--surface-2:#1C232C;--surface-3:#1C232C;
+  --border:#232A33;--border-strong:#2D3641;
+  --text:#EEF1F5;--text-soft:#C2CAD3;--text-muted:#8B95A1;--placeholder:#6F7986;
+  --danger:#E06464;--danger-soft:#341819;--danger-border:#5A2A2A;
+  --warning:#D99A3A;--warning-soft:#33270F;--warning-border:#574017;
+  --success:#3BB97A;--success-soft:#13301F;--success-border:#1F4D33;
+  --info:#88ABF2;--info-soft:#16233F;--info-border:#21386A;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.4);--shadow:0 8px 28px rgba(0,0,0,.5);
+  --ring:0 0 0 3px rgba(86,133,233,.32);
+  color-scheme:dark;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:var(--font-sans);font-size:var(--fs-base);line-height:1.55;
+  color:var(--text);background:var(--bg);
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  letter-spacing:-0.006em;
+}
+.kb-mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+
+/* ── Page shell ───────────────────────────────────────────────────────────── */
+.kb-wrap{max-width:960px;margin:0 auto;padding:24px 20px 56px;}
+
+/* ── Toolbar ──────────────────────────────────────────────────────────────── */
+.kb-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.kb-toolbar .spacer{flex:1;}
+.kb-seg{
+  display:inline-flex;align-items:center;gap:2px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:3px;
+}
+.kb-seg button{
+  font:600 var(--fs-small)/1 var(--font-sans);color:var(--text-muted);
+  background:transparent;border:0;white-space:nowrap;
+  padding:6px 11px;border-radius:4px;cursor:pointer;
+}
+.kb-seg button.is-active{background:var(--accent-soft);color:var(--accent);}
+.kb-seg button:hover:not(.is-active){color:var(--text);}
+.kb-iconbtn{
+  display:inline-grid;place-items:center;width:34px;height:34px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-sm);color:var(--text-muted);cursor:pointer;
+}
+.kb-iconbtn:hover{color:var(--accent);border-color:var(--accent-border);}
+
+/* ── Document header ──────────────────────────────────────────────────────── */
+.kb-header{
+  display:flex;justify-content:space-between;align-items:flex-start;
+  gap:24px;padding-bottom:20px;margin-bottom:20px;
+  border-bottom:1px solid var(--border);
+}
+.kb-brand{display:flex;align-items:center;gap:14px;min-width:0;}
+.kb-brand .logo{
+  height:46px;width:46px;flex:0 0 46px;border-radius:10px;
+  display:grid;place-items:center;background:var(--accent-soft);
+  color:var(--accent);font-weight:800;font-size:18px;overflow:hidden;
+}
+.kb-brand .logo img{width:100%;height:100%;object-fit:contain;}
+.kb-brand .org{font-size:17px;font-weight:700;color:var(--text);letter-spacing:-0.01em;}
+.kb-brand .org small{display:block;font-size:var(--fs-small);font-weight:500;color:var(--text-muted);letter-spacing:0;}
+.kb-doctitle{text-align:right;}
+.kb-doctitle h1{margin:0;font-size:var(--fs-h1);font-weight:700;letter-spacing:-0.01em;color:var(--text);}
+.kb-doctitle .meta{margin-top:4px;font-size:var(--fs-small);color:var(--text-muted);font-family:var(--font-mono);}
+
+/* ── Cards ────────────────────────────────────────────────────────────────── */
+.kb-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);box-shadow:var(--shadow-sm);
+  padding:20px 22px;margin-bottom:16px;
+}
+.kb-card__title{
+  display:flex;align-items:center;gap:9px;
+  font-size:var(--fs-title);font-weight:700;letter-spacing:-0.005em;
+  color:var(--text-soft);margin:0 0 16px;
+}
+.kb-card__title::before{content:"";width:3px;height:14px;border-radius:2px;background:var(--accent);}
+.kb-card__title .count{margin-left:auto;font-weight:500;color:var(--text-muted);font-size:var(--fs-small);}
+
+/* ── Fields ───────────────────────────────────────────────────────────────── */
+.kb-grid{display:grid;gap:14px 16px;}
+.kb-grid.cols-2{grid-template-columns:1fr 1fr;}
+.kb-grid.cols-3{grid-template-columns:1fr 1fr 1fr;}
+.kb-grid.cols-4{grid-template-columns:1fr 1fr 1fr 1fr;}
+.kb-field{display:flex;flex-direction:column;gap:5px;min-width:0;}
+.kb-field.grow{flex:1;}
+.kb-label{
+  font-size:var(--fs-label);font-weight:600;letter-spacing:0.03em;
+  text-transform:uppercase;color:var(--text-muted);
+}
+.kb-input,.kb-select,.kb-textarea{
+  width:100%;font:400 var(--fs-input)/1.4 var(--font-sans);
+  color:var(--text);background:var(--surface);
+  border:1px solid var(--border-strong);border-radius:var(--radius-sm);
+  padding:9px 11px;outline:none;transition:border-color .14s,box-shadow .14s;
+}
+.kb-input::placeholder,.kb-textarea::placeholder{color:var(--placeholder);}
+.kb-input:focus,.kb-select:focus,.kb-textarea:focus{border-color:var(--accent);box-shadow:var(--ring);}
+.kb-input:disabled,.kb-select:disabled,.kb-input[readonly]{background:var(--surface-3);color:var(--text-muted);cursor:not-allowed;}
+.kb-input.num,.kb-mono-input{font-family:var(--font-mono);text-align:right;font-variant-numeric:tabular-nums;}
+.kb-textarea{resize:vertical;min-height:52px;}
+.kb-select{
+  appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%235F6975' stroke-width='1.6'><path d='M4 6l4 4 4-4'/></svg>");
+  background-repeat:no-repeat;background-position:right 10px center;padding-right:32px;
+}
+.kb-input.is-error,.kb-select.is-error{border-color:var(--danger);}
+.kb-input.is-warn,.kb-select.is-warn{border-color:var(--warning);background:var(--warning-soft);}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.kb-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  white-space:nowrap;font:600 var(--fs-input)/1 var(--font-sans);
+  padding:10px 16px;border-radius:var(--radius-sm);
+  border:1px solid transparent;cursor:pointer;
+  transition:background .14s,border-color .14s,color .14s;
+}
+.kb-btn svg{width:16px;height:16px;}
+.kb-btn--primary{background:var(--accent);color:var(--on-accent);}
+.kb-btn--primary:hover{background:var(--accent-hover);}
+.kb-btn--primary:disabled{opacity:.5;cursor:not-allowed;}
+.kb-btn--ghost{background:var(--surface);color:var(--text-soft);border-color:var(--border-strong);}
+.kb-btn--ghost:hover{border-color:var(--accent);color:var(--accent);}
+.kb-btn--soft{background:var(--accent-soft);color:var(--accent);}
+.kb-btn--soft:hover{background:var(--accent);color:var(--on-accent);}
+.kb-btn--dashed{background:transparent;color:var(--accent);border:1px dashed var(--accent-border);}
+.kb-btn--dashed:hover{background:var(--accent-soft);border-color:var(--accent);}
+.kb-btn--danger{background:transparent;color:var(--danger);padding:6px 10px;border:1px solid transparent;}
+.kb-btn--danger:hover{background:var(--danger-soft);}
+.kb-btn--lg{padding:13px 26px;}
+.kb-btn--block{width:100%;}
+
+/* ── Item blocks ──────────────────────────────────────────────────────────── */
+.kb-block{
+  border:1px solid var(--border);border-radius:var(--radius);
+  background:var(--surface-2);padding:16px 18px;margin-bottom:14px;
+}
+.kb-block__head{
+  display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;
+}
+.kb-block__tag{
+  font-size:var(--fs-label);font-weight:700;text-transform:uppercase;
+  letter-spacing:.04em;color:var(--accent);
+}
+.kb-block__name{flex:1;}
+.kb-subtotal{font-family:var(--font-mono);font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;white-space:nowrap;}
+
+/* ── Line block ───────────────────────────────────────────────────────────── */
+.kb-line{padding:14px 0;}
+.kb-line+.kb-line{border-top:1px solid var(--border);}
+.kb-line-section{display:grid;gap:12px 14px;margin-bottom:12px;}
+.kb-line-section.row1{grid-template-columns:140px 1fr auto auto;}
+.kb-line-section.row2{grid-template-columns:1fr auto auto;}
+.kb-line-section.row3{grid-template-columns:1fr 1fr;}
+
+/* ── Receipt area ─────────────────────────────────────────────────────────── */
+.rb-receipt-area{margin-top:10px;}
+.rb-receipt{
+  display:flex;align-items:center;gap:9px;padding:8px 12px;margin-bottom:6px;
+  background:var(--accent-soft);border:1px solid var(--accent-border);
+  border-radius:var(--radius-sm);font-size:var(--fs-small);color:var(--text-soft);
+}
+.rb-receipt svg{width:15px;height:15px;color:var(--accent);flex:0 0 15px;}
+.rb-receipt .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rb-receipt .rm{background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0 2px;font-size:14px;line-height:1;}
+.rb-receipt .rm:hover{color:var(--danger);}
+.rb-no-receipt{margin-top:8px;}
+
+/* ── Totals ───────────────────────────────────────────────────────────────── */
+.kb-totals .grand{
+  display:flex;justify-content:space-between;align-items:baseline;gap:16px;
+  padding-top:12px;border-top:1px solid var(--border-strong);
+}
+.kb-totals .grand .lab{font-weight:700;color:var(--text);font-size:var(--fs-base);}
+.kb-totals .grand .val{
+  font-family:var(--font-mono);font-weight:700;font-size:calc(20px * var(--font-scale));
+  color:var(--accent);font-variant-numeric:tabular-nums;
+}
+
+/* ── Validation note ──────────────────────────────────────────────────────── */
+.kb-note{
+  border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:16px;
+  font-size:var(--fs-small);line-height:1.7;
+  display:flex;gap:10px;align-items:flex-start;
+}
+.kb-note svg{width:17px;height:17px;flex:0 0 17px;margin-top:1px;}
+.kb-note--error{background:var(--danger-soft);border:1px solid var(--danger-border);color:var(--danger);}
+.kb-note--warning{background:var(--warning-soft);border:1px solid var(--warning-border);color:var(--warning);}
+.kb-note--success{background:var(--success-soft);border:1px solid var(--success-border);color:var(--success);}
+.kb-note--info{background:var(--info-soft);border:1px solid var(--info-border);color:var(--info);}
+
+/* ── Custom currency dropdown ─────────────────────────────────────────────── */
+.cdd{position:relative;display:inline-block;}
+.cdd-trigger{
+  padding:9px 32px 9px 11px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);
+  background:var(--surface) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%235F6975' stroke-width='1.6'><path d='M4 6l4 4 4-4'/></svg>") no-repeat right 10px center;
+  cursor:pointer;font:400 var(--fs-input)/1.4 var(--font-sans);color:var(--text);
+  text-align:left;width:100%;outline:none;transition:border-color .14s,box-shadow .14s;
+}
+.cdd-trigger:focus{border-color:var(--accent);box-shadow:var(--ring);}
+.cdd-panel{
+  display:none;position:absolute;top:calc(100% + 2px);left:0;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);box-shadow:var(--shadow);
+  z-index:100;min-width:200px;max-height:260px;overflow-y:auto;
+}
+.cdd-panel.open{display:block;}
+.cdd-opt{padding:8px 12px;cursor:pointer;}
+.cdd-opt:hover{background:var(--surface-2);}
+.cdd-opt .code{font-weight:600;font-size:var(--fs-input);color:var(--text);}
+.cdd-opt .name{font-size:var(--fs-small);color:var(--text-muted);}
+.cdd-opt+.cdd-opt{border-top:1px solid var(--border);}
+
+/* ── Modal overlay ────────────────────────────────────────────────────────── */
+.kb-overlay{
+  position:fixed;inset:0;background:rgba(14,18,26,.55);
+  z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.kb-modal{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:24px 28px;
+  max-width:420px;width:100%;max-height:80vh;overflow-y:auto;
+}
+.kb-modal h2{font-size:var(--fs-title);font-weight:700;color:var(--text);margin-bottom:12px;}
+.kb-modal p,.kb-modal .body{font-size:var(--fs-small);line-height:1.65;color:var(--text-soft);margin-bottom:20px;}
+.kb-modal-footer{display:flex;justify-content:flex-end;gap:10px;}
 
 /* About modal prose */
-.about-body h1,.about-body h2,.about-body h3 { font-size: 14px; font-weight: 700; margin: 12px 0 4px; color: var(--accent); }
-.about-body p { margin: 0 0 10px; }
-.about-body ul { margin: 0 0 10px 18px; }
-.about-body li { margin-bottom: 3px; }
-.about-body a { color: var(--accent); }
-.about-body strong { font-weight: 700; }
-.about-body em { font-style: italic; }
+.about-body h1,.about-body h2,.about-body h3{font-size:var(--fs-title);font-weight:700;margin:12px 0 4px;color:var(--text);}
+.about-body p{margin:0 0 10px;}
+.about-body ul{margin:0 0 10px 18px;}
+.about-body li{margin-bottom:3px;}
+.about-body a{color:var(--accent);}
+.about-body strong{font-weight:700;}
+.about-body em{font-style:italic;}
+
+/* ── Footer ───────────────────────────────────────────────────────────────── */
+.kb-footer{
+  max-width:960px;margin:0 auto;padding:16px 20px 10px;
+  font-size:var(--fs-small);color:var(--text-muted);
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+}
+.kb-footer a{color:var(--text-muted);text-decoration:none;}
+.kb-footer a:hover{color:var(--accent);text-decoration:underline;}
+.kb-footer .sep{opacity:.45;}
+
+/* ── Loading ──────────────────────────────────────────────────────────────── */
+.kb-loading{text-align:center;padding:80px;color:var(--text-muted);}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width:680px){
+  .kb-grid.cols-2,.kb-grid.cols-3,.kb-grid.cols-4{grid-template-columns:1fr;}
+  .kb-header{flex-direction:column;gap:14px;}
+  .kb-doctitle{text-align:left;}
+  .kb-line-section.row1,.kb-line-section.row2,.kb-line-section.row3{grid-template-columns:1fr;}
+}
 </style>
 </head>
 <body>
-<div id="app"><p class="loading">Loading configuration…</p></div>
-<footer class="app-footer">
+<div id="app"><p class="kb-loading">Loading configuration…</p></div>
+<footer class="kb-footer">
   <span>© 2026 Kristian Benestad</span>
-  <span class="sep">•</span>
+  <span class="sep">·</span>
   <a href="https://docs.benestad.net/invoice" target="_blank" rel="noopener">docs.benestad.net</a>
-  <span class="sep">•</span>
+  <span class="sep">·</span>
   <a href="https://github.com/kbenestad/reimburse" target="_blank" rel="noopener">kbenestad/reimburse</a>
-  <span class="sep">•</span>
+  <span class="sep">·</span>
   <a href="#" id="about-link">About</a>
 </footer>
 
@@ -157,28 +391,42 @@ function defaultPeriod() {
   return { from: fmt(new Date(y, m, 1)), to: fmt(new Date(y, m + 1, 0)) };
 }
 
+// ── Field helper ──────────────────────────────────────────────────────────
+function kbField(label, input, opts) {
+  const cls = 'kb-field' + (opts && opts.grow ? ' grow' : '') + (opts && opts.cls ? ' ' + opts.cls : '');
+  const f = el('div', {className: cls});
+  f.appendChild(el('span', {className:'kb-label'}, label));
+  f.appendChild(input);
+  if (opts && opts.hint) {
+    const h = el('div', {style:{fontSize:'var(--fs-small)',color:'var(--text-muted)',marginTop:'3px'}}, opts.hint);
+    f.appendChild(h);
+  }
+  return f;
+}
+
 // ========== DATE HELPERS ==========
 function isDateInPeriod(date) {
   if (!date || !state.periodFrom || !state.periodTo) return true;
   return date >= state.periodFrom && date <= state.periodTo;
 }
 
+// ========== MODALS ==========
 function showConfirmModal(msg) {
   return new Promise(resolve => {
-    const overlay = el('div', {style:{position:'fixed',top:'0',right:'0',bottom:'0',left:'0',background:'rgba(0,0,0,.45)',zIndex:'9999',display:'flex',alignItems:'center',justifyContent:'center'}});
-    const box = el('div', {style:{background:'#fff',borderRadius:'8px',padding:'24px 28px',maxWidth:'400px',width:'90%',boxShadow:'0 8px 32px rgba(0,0,0,.25)'}});
-    const hdr = el('div', {style:{display:'flex',alignItems:'center',gap:'10px',marginBottom:'14px'}});
-    hdr.append(el('span', {style:{fontSize:'20px',color:'#e65100'}}, '⚠'), el('strong', {style:{fontSize:'15px',color:'#e65100'}}, 'Warning'));
-    const body = el('p', {style:{fontSize:'13px',lineHeight:'1.6',color:'var(--text)',marginBottom:'20px'}});
-    body.innerHTML = msg;
-    const footer = el('div', {style:{display:'flex',justifyContent:'flex-end',gap:'10px'}});
-    const cancelBtn = el('button', {className:'btn btn-add', style:{padding:'8px 18px',fontSize:'13px'}}, 'Cancel');
-    const confirmBtn = el('button', {className:'btn btn-gen', style:{width:'auto',padding:'8px 24px',marginTop:'0'}}, 'Yes, start new form');
+    const overlay = el('div', {className:'kb-overlay'});
+    const box = el('div', {className:'kb-modal'});
+    const note = el('div', {className:'kb-note kb-note--warning', style:{marginBottom:'16px'}});
+    note.innerHTML = `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg><span></span>`;
+    note.querySelector('span').innerHTML = msg;
+    const footer = el('div', {className:'kb-modal-footer'});
+    const cancelBtn = el('button', {className:'kb-btn kb-btn--ghost'}, 'Cancel');
+    const confirmBtn = el('button', {className:'kb-btn kb-btn--primary'}, 'Yes, start new form');
     cancelBtn.addEventListener('click', () => { overlay.remove(); resolve(false); });
     confirmBtn.addEventListener('click', () => { overlay.remove(); resolve(true); });
     footer.append(cancelBtn, confirmBtn);
-    box.append(hdr, body, footer);
+    box.append(note, footer);
     overlay.appendChild(box);
+    overlay.addEventListener('click', e => { if (e.target === overlay) { overlay.remove(); resolve(false); } });
     document.body.appendChild(overlay);
     cancelBtn.focus();
   });
@@ -186,18 +434,18 @@ function showConfirmModal(msg) {
 
 function showWarningModal(msg) {
   return new Promise(resolve => {
-    const overlay = el('div', {style:{position:'fixed',top:'0',right:'0',bottom:'0',left:'0',background:'rgba(0,0,0,.45)',zIndex:'9999',display:'flex',alignItems:'center',justifyContent:'center'}});
-    const box = el('div', {style:{background:'#fff',borderRadius:'8px',padding:'24px 28px',maxWidth:'400px',width:'90%',boxShadow:'0 8px 32px rgba(0,0,0,.25)'}});
-    const hdr = el('div', {style:{display:'flex',alignItems:'center',gap:'10px',marginBottom:'14px'}});
-    hdr.append(el('span', {style:{fontSize:'20px',color:'#e65100'}}, '⚠'), el('strong', {style:{fontSize:'15px',color:'#e65100'}}, 'Warning'));
-    const body = el('p', {style:{fontSize:'13px',lineHeight:'1.6',color:'var(--text)',marginBottom:'20px'}});
-    body.innerHTML = msg;
-    const footer = el('div', {style:{display:'flex',justifyContent:'flex-end'}});
-    const okBtn = el('button', {className:'btn btn-gen', style:{width:'auto',padding:'8px 28px',marginTop:'0'}}, 'OK');
+    const overlay = el('div', {className:'kb-overlay'});
+    const box = el('div', {className:'kb-modal'});
+    const note = el('div', {className:'kb-note kb-note--info', style:{marginBottom:'16px'}});
+    note.innerHTML = `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zm.9 6.8H7.1v5.4h1.8V6.8zM8 3.3a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2z"/></svg><span></span>`;
+    note.querySelector('span').innerHTML = msg;
+    const footer = el('div', {className:'kb-modal-footer'});
+    const okBtn = el('button', {className:'kb-btn kb-btn--primary'}, 'OK');
     okBtn.addEventListener('click', () => { overlay.remove(); resolve(); });
     footer.appendChild(okBtn);
-    box.append(hdr, body, footer);
+    box.append(note, footer);
     overlay.appendChild(box);
+    overlay.addEventListener('click', e => { if (e.target === overlay) { overlay.remove(); resolve(); } });
     document.body.appendChild(overlay);
     okBtn.focus();
   });
@@ -213,9 +461,7 @@ function mdToHtml(md) {
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-  // Lists
   html = html.replace(/((?:^- .+\n?)+)/gm, m => '<ul>' + m.replace(/^- (.+)$/gm, '<li>$1</li>') + '</ul>');
-  // Paragraphs (blocks not already wrapped in a tag)
   html = html.split(/\n{2,}/).map(b => b.trim()).filter(Boolean).map(b => /^<[hul]/.test(b) ? b : `<p>${b.replace(/\n/g, '<br>')}</p>`).join('\n');
   return html;
 }
@@ -224,23 +470,21 @@ function showAboutModal() {
   const title = (CFG && CFG['about-title']) || 'About';
   const content = (CFG && CFG['about-content']) || '';
   const btnLabel = (CFG && CFG['about-button']) || 'Close';
-  const overlay = el('div', {style:{position:'fixed',top:'0',right:'0',bottom:'0',left:'0',background:'rgba(0,0,0,.45)',zIndex:'9999',display:'flex',alignItems:'center',justifyContent:'center'}});
-  const box = el('div', {style:{background:'#fff',borderRadius:'8px',padding:'24px 28px',maxWidth:'480px',width:'90%',maxHeight:'80vh',overflowY:'auto',boxShadow:'0 8px 32px rgba(0,0,0,.25)'}});
-  const hdr = el('div', {style:{marginBottom:'16px'}});
-  hdr.appendChild(el('strong', {style:{fontSize:'16px',color:'var(--accent)'}}, title));
-  const body = el('div', {className:'about-body', style:{fontSize:'13px',lineHeight:'1.65',color:'var(--text)',marginBottom:'20px'}});
+  const overlay = el('div', {className:'kb-overlay'});
+  const box = el('div', {className:'kb-modal'});
+  box.appendChild(el('h2', null, title));
+  const body = el('div', {className:'about-body body'});
   body.innerHTML = mdToHtml(content);
-  const foot = el('div', {style:{display:'flex',justifyContent:'flex-end'}});
-  const closeBtn = el('button', {className:'btn btn-gen', style:{width:'auto',padding:'8px 28px',marginTop:'0'}}, btnLabel);
+  const footer = el('div', {className:'kb-modal-footer'});
+  const closeBtn = el('button', {className:'kb-btn kb-btn--primary'}, btnLabel);
   closeBtn.addEventListener('click', () => overlay.remove());
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-  foot.appendChild(closeBtn);
-  box.append(hdr, body, foot);
+  footer.appendChild(closeBtn);
+  box.append(body, footer);
   overlay.appendChild(box);
   document.body.appendChild(overlay);
   closeBtn.focus();
 }
-
 
 // ========== CONFIG ==========
 let CFG;
@@ -248,7 +492,7 @@ async function loadConfig() {
   const res = await fetch('config.yml');
   if (!res.ok) throw new Error('Cannot load config.yml');
   CFG = jsyaml.load(await res.text());
-  document.documentElement.style.setProperty('--accent', CFG['accent-colour'] || '#1a3a5c');
+  document.documentElement.style.setProperty('--accent', CFG['accent-colour'] || '#2F6FED');
 }
 
 // ========== STATE ==========
@@ -380,7 +624,9 @@ function recalc() {
   });
   state._grandTotal = grand;
   const ge = $('#grand-total');
-  if (ge) ge.textContent = `${state.baseCurrency} ${fmtAmt(grand)}`;
+  if (ge) ge.textContent = fmtAmt(grand);
+  const gl = $('#grand-total-label');
+  if (gl) gl.textContent = `Total claim (${state.baseCurrency})`;
 }
 
 // ========== CURRENCY HELPERS ==========
@@ -416,7 +662,7 @@ function makeCDD(currencies, value, onChange) {
 
 // ========== SELECT HELPER ==========
 function makeSelect(options, value, onChange, placeholder) {
-  const s = el('select');
+  const s = el('select', {className:'kb-select'});
   if (placeholder) s.appendChild(el('option', {value:'', disabled:'', selected: !value ? '' : undefined}, placeholder));
   options.forEach(o => {
     const opt = el('option', {value: o}, o);
@@ -431,131 +677,198 @@ function makeSelect(options, value, onChange, placeholder) {
 function render() {
   const app = $('#app');
   app.innerHTML = '';
-  const wrap = el('div', {className:'wrap'});
+  const wrap = el('div', {className:'kb-wrap'});
 
   // Validation summary placeholder
   const valBox = el('div', {id:'val-box'});
   wrap.appendChild(valBox);
 
-  // Header
-  const hdr = el('div', {className:'form-hdr'});
-  const logoDiv = el('div', {className:'logo'});
+  // ── Toolbar ──────────────────────────────────────────────────────────────
+  const toolbar = el('div', {className:'kb-toolbar'});
+  toolbar.appendChild(el('div', {className:'spacer'}));
+
+  // Font size
+  const sizeSeg = el('div', {className:'kb-seg', role:'group', 'aria-label':'Text size'});
+  const sizeOpts = [{lbl:'A−', scale:0.9}, {lbl:'A', scale:1}, {lbl:'A+', scale:1.12}];
+  let activeSizeIdx = 1;
+  sizeOpts.forEach((s, i) => {
+    const btn = el('button', {type:'button', className: i === activeSizeIdx ? 'is-active' : ''}, s.lbl);
+    btn.addEventListener('click', () => {
+      $$('button', sizeSeg).forEach(b => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      document.documentElement.style.setProperty('--font-scale', s.scale);
+    });
+    sizeSeg.appendChild(btn);
+  });
+  toolbar.appendChild(sizeSeg);
+
+  // Theme toggle
+  const themeSeg = el('div', {className:'kb-seg', role:'group', 'aria-label':'Colour theme'});
+  const savedTheme = localStorage.getItem('reimb-theme');
+  [{lbl:'Auto', val:null}, {lbl:'Light', val:'light'}, {lbl:'Dark', val:'dark'}].forEach(t => {
+    const isActive = savedTheme === t.val || (!savedTheme && t.val === null);
+    const btn = el('button', {type:'button', className: isActive ? 'is-active' : ''}, t.lbl);
+    btn.addEventListener('click', () => {
+      $$('button', themeSeg).forEach(b => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      if (t.val) {
+        document.documentElement.setAttribute('data-theme', t.val);
+        localStorage.setItem('reimb-theme', t.val);
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.removeItem('reimb-theme');
+      }
+    });
+    themeSeg.appendChild(btn);
+  });
+  toolbar.appendChild(themeSeg);
+
+  // About
+  const aboutBtn = el('button', {className:'kb-iconbtn', type:'button', 'aria-label':'About', onClick: showAboutModal});
+  aboutBtn.innerHTML = `<svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zm.9 6.8H7.1v5.4h1.8V6.8zM8 3.3a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2z"/></svg>`;
+  toolbar.appendChild(aboutBtn);
+  wrap.appendChild(toolbar);
+
+  // ── Header ────────────────────────────────────────────────────────────────
+  const hdr = el('div', {className:'kb-header'});
+  const brand = el('div', {className:'kb-brand'});
+  const logoBox = el('span', {className:'logo'});
   if (CFG.logo === true || CFG.logo === 'yes') {
     const img = el('img', {alt: CFG.organization || ''});
     img.src = 'assets/logo.png';
-    img.onerror = function() { this.src = 'assets/logo.jpg'; this.onerror = function() {
-      this.replaceWith(el('span', {className:'org-name'}, CFG.organization || ''));
-    }; };
-    if (CFG['logo-maxwidth']) img.style.maxWidth = CFG['logo-maxwidth'] + 'cm';
-    logoDiv.appendChild(img);
+    img.onerror = function() {
+      this.src = 'assets/logo.jpg';
+      this.onerror = function() {
+        this.replaceWith(document.createTextNode((CFG.organization || 'ORG').slice(0,2).toUpperCase()));
+      };
+    };
+    if (CFG['logo-maxwidth']) img.style.maxWidth = CFG['logo-maxwidth'] * 28.3465 + 'px';
+    logoBox.appendChild(img);
   } else {
-    logoDiv.appendChild(el('span', {className:'org-name'}, CFG.organization || ''));
+    logoBox.textContent = (CFG.organization || 'ORG').slice(0,2).toUpperCase();
   }
-  hdr.append(logoDiv, el('div', {className:'title'}, 'Reimbursement Form'));
+  const orgSpan = el('span', {className:'org'}, CFG.organization || '');
+  orgSpan.appendChild(el('small', null, 'Expense reimbursement'));
+  brand.append(logoBox, orgSpan);
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-GB', {day:'numeric', month:'long', year:'numeric'});
+  const docTitle = el('div', {className:'kb-doctitle'});
+  docTitle.appendChild(el('h1', null, 'Reimbursement'));
+  docTitle.appendChild(el('div', {className:'meta'}, `Claim · ${dateStr}`));
+  hdr.append(brand, docTitle);
   wrap.appendChild(hdr);
 
-  // Staff / Period / Currency row
+  // ── Claimant card ─────────────────────────────────────────────────────────
   const savedStaff = localStorage.getItem('reimb-staff') || '';
   if (savedStaff && !state.staff) state.staff = savedStaff;
   const period = defaultPeriod();
   if (!state.periodFrom) state.periodFrom = period.from;
   if (!state.periodTo) state.periodTo = period.to;
 
-  const staffInput = el('input', {type:'text', value: state.staff, placeholder:'Full name'});
+  const staffInput = el('input', {className:'kb-input', type:'text', value: state.staff, placeholder:'Full name'});
   staffInput.addEventListener('input', () => { state.staff = staffInput.value; localStorage.setItem('reimb-staff', staffInput.value); });
 
-  const newFormBtn = el('button', {type:'button', className:'btn btn-save', style:{padding:'7px 14px',fontSize:'13px'}, onClick: onNewForm}, 'New Form');
+  const newFormBtn = el('button', {type:'button', className:'kb-btn kb-btn--ghost', style:{flexShrink:'0'}, onClick: onNewForm}, 'New form');
+  const staffWrap = el('div', {style:{display:'flex', gap:'8px', alignItems:'center'}});
+  staffWrap.append(staffInput, newFormBtn);
 
-  const fromInput = el('input', {type:'date'});
+  const fromInput = el('input', {className:'kb-input', type:'date'});
   fromInput.value = state.periodFrom;
   fromInput.addEventListener('change', () => { state.periodFrom = fromInput.value; });
-  const toInput = el('input', {type:'date'});
+
+  const toInput = el('input', {className:'kb-input', type:'date'});
   toInput.value = state.periodTo;
   toInput.addEventListener('change', () => { state.periodTo = toInput.value; });
 
   const baseCurDD = makeCDD(CFG.currencies || [], state.baseCurrency, code => {
     state.baseCurrency = code;
     const box = $('#items-box');
-    if (box) {
-      box.innerHTML = '';
-      state.items.forEach(item => box.appendChild(renderItem(item)));
-    }
+    if (box) { box.innerHTML = ''; state.items.forEach(item => box.appendChild(renderItem(item))); }
     recalc();
   });
 
-  wrap.appendChild(el('div', {className:'frow'}, [
-    el('div', {className:'fgrp grow'}, [el('label', null, 'Staff'), el('div', {style:{display:'flex',gap:'8px',alignItems:'center'}}, [staffInput, newFormBtn])]),
-    el('div', {className:'fgrp'}, [el('label', null, 'Period from'), fromInput]),
-    el('div', {className:'fgrp'}, [el('label', null, 'to'), toInput]),
-    el('div', {className:'fgrp'}, [el('label', null, 'Base currency'), baseCurDD]),
-  ]));
+  const claimCard = el('div', {className:'kb-card'});
+  claimCard.appendChild(el('h2', {className:'kb-card__title'}, 'Claimant'));
+  const claimGrid = el('div', {className:'kb-grid cols-3'});
+  claimGrid.appendChild(kbField('Staff', staffWrap, {cls:''}));
+  // Period from + to span col 2-3
+  const periodGroup = el('div', {style:{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px 16px', gridColumn:'span 2'}});
+  periodGroup.appendChild(kbField('Period from', fromInput));
+  periodGroup.appendChild(kbField('Period to', toInput));
+  claimGrid.appendChild(periodGroup);
+  claimGrid.appendChild(kbField('Base currency', baseCurDD));
+  claimCard.appendChild(claimGrid);
+  wrap.appendChild(claimCard);
 
-  wrap.appendChild(el('hr', {className:'divider'}));
+  // ── Expenses card ─────────────────────────────────────────────────────────
+  const expCard = el('div', {className:'kb-card'});
+  const expTitle = el('h2', {className:'kb-card__title'}, 'Expenses');
+  expCard.appendChild(expTitle);
 
-  // Items container
   const itemsBox = el('div', {id:'items-box'});
   state.items.forEach(item => itemsBox.appendChild(renderItem(item)));
-  wrap.appendChild(itemsBox);
+  expCard.appendChild(itemsBox);
 
-  // Add item + Grand total row
-  const addItemBtn = el('button', {className:'btn btn-add', onClick: () => {
+  const addItemBtn = el('button', {className:'kb-btn kb-btn--dashed', style:{marginTop:'4px'}, onClick: () => {
     const item = newItem();
     state.items.push(item);
     itemsBox.appendChild(renderItem(item));
     recalc();
-  }}, '+ Add item / project / travel');
+  }}, '+ Add expense item');
+  expCard.appendChild(addItemBtn);
+  wrap.appendChild(expCard);
 
-  wrap.appendChild(el('div', {className:'totals-row'}, [
-    addItemBtn,
-    el('div', {className:'grand-total'}, [
-      'Total reimbursement claim: ',
-      el('span', {id:'grand-total'}, `${state.baseCurrency} ${fmtAmt(0)}`)
-    ])
-  ]));
-
-  // Action buttons
-  const actionRow = el('div', {style:{display:'flex', gap:'12px', marginTop:'16px'}});
-  actionRow.append(
-    el('button', {className:'btn btn-save', onClick: onSave}, 'Save Reimbursement Form'),
-    el('button', {className:'btn btn-gen', id:'gen-btn', style:{flex:'1', marginTop:'0', width:'auto'}, onClick: onGenerate}, 'Generate Reimbursement Form')
+  // ── Totals + actions card ─────────────────────────────────────────────────
+  const actCard = el('div', {className:'kb-card'});
+  const totals = el('div', {className:'kb-totals'});
+  const grandRow = el('div', {className:'grand'});
+  grandRow.append(
+    el('span', {className:'lab', id:'grand-total-label'}, `Total claim (${state.baseCurrency})`),
+    el('span', {className:'val kb-mono', id:'grand-total'}, fmtAmt(0))
   );
-  wrap.appendChild(actionRow);
+  totals.appendChild(grandRow);
+  actCard.appendChild(totals);
+
+  const actionRow = el('div', {style:{display:'flex', gap:'12px', marginTop:'16px', flexWrap:'wrap'}});
+  const saveBtn = el('button', {className:'kb-btn kb-btn--soft', onClick: onSave}, 'Save form');
+  const genBtn = el('button', {className:'kb-btn kb-btn--primary kb-btn--lg', id:'gen-btn', style:{flex:'1'}, onClick: onGenerate});
+  genBtn.innerHTML = `<svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16"><path d="M8 1a1 1 0 0 1 1 1v6.6l2.3-2.3a1 1 0 0 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 1.4-1.4L7 8.6V2a1 1 0 0 1 1-1zM3 13h10a1 1 0 1 1 0 2H3a1 1 0 1 1 0-2z"/></svg>Generate PDF`;
+  actionRow.append(saveBtn, genBtn);
+  actCard.appendChild(actionRow);
+  wrap.appendChild(actCard);
 
   app.appendChild(wrap);
   recalc();
 }
 
 function renderItem(item) {
-  const blk = el('div', {className:'item-blk', id:`item-${item.id}`});
+  const blk = el('div', {className:'kb-block', id:`item-${item.id}`});
+  const itemNum = state.items.indexOf(item) + 1;
 
-  // Item header
-  const nameIn = el('input', {className:'item-name', type:'text', value: item.name, placeholder:'Item / project / travel name'});
+  const nameIn = el('input', {className:'kb-input kb-block__name', type:'text', value: item.name, placeholder:'Item / project / travel name'});
   nameIn.addEventListener('input', () => { item.name = nameIn.value; });
 
-  const rmBtn = el('button', {className:'btn btn-rm', onClick: () => {
+  const rmBtn = el('button', {className:'kb-btn kb-btn--danger', type:'button', onClick: () => {
     state.items = state.items.filter(i => i.id !== item.id);
     blk.remove();
     recalc();
-  }}, '✕ Remove');
+  }}, 'Remove');
 
-  blk.appendChild(el('div', {className:'item-hdr'}, [
-    el('label', null, 'Item / Project / Travel'),
+  const head = el('div', {className:'kb-block__head'});
+  head.append(
+    el('span', {className:'kb-block__tag'}, `Item ${itemNum}`),
+    nameIn,
+    el('span', {className:'kb-subtotal', id:`sub-${item.id}`}, `${state.baseCurrency} ${fmtAmt(0)}`),
     rmBtn
-  ]));
-  blk.appendChild(nameIn);
-  blk.appendChild(el('div', {className:'item-subtotal-row'}, [
-    el('span', {className:'item-subtotal'}, [
-      'Subtotal: ', el('span', {id:`sub-${item.id}`}, `${state.baseCurrency} ${fmtAmt(0)}`)
-    ])
-  ]));
+  );
+  blk.appendChild(head);
 
-  // Lines container
   const linesBox = el('div', {id:`lines-${item.id}`});
   item.lines.forEach(ln => linesBox.appendChild(renderLine(ln, item)));
   blk.appendChild(linesBox);
 
-  // Add line button
-  blk.appendChild(el('button', {className:'btn btn-add', style:{marginTop:'10px'}, onClick: () => {
+  blk.appendChild(el('button', {className:'kb-btn kb-btn--dashed', style:{marginTop:'10px'}, onClick: () => {
     const ln = newLine();
     item.lines.push(ln);
     linesBox.appendChild(renderLine(ln, item));
@@ -566,28 +879,41 @@ function renderItem(item) {
 }
 
 function renderLine(ln, item) {
-  const blk = el('div', {className:'line-blk', id:`line-${ln.id}`});
+  const blk = el('div', {className:'kb-line', id:`line-${ln.id}`});
   let progAreaEl;
 
   const currencies = CFG.currencies || [];
   const baseCur = state.baseCurrency;
 
-  // Row 1: Date, Vendor, Currency, FX Rate
-  const dateIn = el('input', {type:'date', style:{width:'150px'}});
+  // Date input
+  const dateIn = el('input', {className:'kb-input' + (ln.date && !isDateInPeriod(ln.date) ? ' is-warn' : ''), type:'date'});
   if (ln.date) dateIn.value = ln.date;
-  if (ln.date && !isDateInPeriod(ln.date)) dateIn.classList.add('input-warn');
   dateIn.addEventListener('change', async () => {
     ln.date = dateIn.value;
     if (ln.date && !isDateInPeriod(ln.date)) {
-      dateIn.classList.add('input-warn');
-      await showWarningModal('The date of the expense is not within the period you have chosen at the top of the form. You can continue with this date, but it will be flagged on the form.');
+      dateIn.classList.add('is-warn');
+      await showWarningModal('The date is outside the claim period. You can continue, but it will be flagged on the PDF.');
     } else {
-      dateIn.classList.remove('input-warn');
+      dateIn.classList.remove('is-warn');
     }
   });
 
-  const vendIn = el('input', {type:'text', value: ln.vendor, placeholder:'Vendor name'});
+  // Vendor
+  const vendIn = el('input', {className:'kb-input', type:'text', value: ln.vendor, placeholder:'Vendor name'});
   vendIn.addEventListener('input', () => { ln.vendor = vendIn.value; });
+
+  // FX
+  const fxIn = el('input', {className:'kb-input num', type:'text', placeholder:'0.00000', style:{minWidth:'0'}});
+  fxIn.value = ln.fxRate;
+  fxIn.readOnly = !ln.customCurrency && ln.currency === baseCur;
+  if (fxIn.readOnly) fxIn.className = 'kb-input num';
+  fxIn.addEventListener('input', () => {
+    ln.fxRate = fxIn.value;
+    const rate = parseFloat(fxIn.value);
+    if (ln.currency && ln.currency !== baseCur && rate > 0) state.fxRateMemory[ln.currency] = fxIn.value;
+    recalc();
+    if (progAreaEl) progAreaEl._refresh();
+  });
 
   async function showFxModal(code) {
     const bn = getCurrencyName(baseCur);
@@ -632,57 +958,42 @@ function renderLine(ln, item) {
   });
   if (ln.customCurrency) curDD.style.display = 'none';
 
-  const otherCurIn = el('input', {type:'text', maxlength:'3', placeholder:'e.g. THB',
-    style:{width:'70px', textTransform:'uppercase', letterSpacing:'1px', fontFamily:'inherit'}});
+  const otherCurIn = el('input', {className:'kb-input', type:'text', maxlength:'3', placeholder:'e.g. THB',
+    style:{textTransform:'uppercase', letterSpacing:'1px', minWidth:'0', width:'80px'}});
   if (ln.customCurrency && ln.currency) otherCurIn.value = ln.currency;
   otherCurIn.addEventListener('input', () => {
     const val = otherCurIn.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
     otherCurIn.value = val;
     ln.currency = val;
-    if (val.length === 3) {
-      applyFxCurrency(val);
-    } else {
-      ln.fxRate = ''; fxIn.value = ''; fxIn.readOnly = false;
-      recalc(); if (progAreaEl) progAreaEl._refresh();
-    }
+    if (val.length === 3) applyFxCurrency(val);
+    else { ln.fxRate = ''; fxIn.value = ''; fxIn.readOnly = false; recalc(); if (progAreaEl) progAreaEl._refresh(); }
   });
 
-  const cancelOtherBtn = el('button', {type:'button', className:'btn btn-rm', style:{padding:'2px 6px', fontSize:'12px'}}, '×');
+  const cancelOtherBtn = el('button', {type:'button', className:'kb-btn kb-btn--danger', style:{padding:'6px 8px'}}, '×');
   cancelOtherBtn.addEventListener('click', () => {
-    ln.customCurrency = false;
-    ln.currency = baseCur;
-    otherCurWrap.style.display = 'none';
-    curDD.style.display = '';
-    curDD._setValue(baseCur);
-    applyFxCurrency(baseCur);
+    ln.customCurrency = false; ln.currency = baseCur;
+    otherCurWrap.style.display = 'none'; curDD.style.display = '';
+    curDD._setValue(baseCur); applyFxCurrency(baseCur);
   });
 
-  const otherCurWrap = el('div', {style:{gap:'4px', alignItems:'center', display: ln.customCurrency ? 'flex' : 'none'}});
+  const otherCurWrap = el('div', {style:{display: ln.customCurrency ? 'flex' : 'none', gap:'4px', alignItems:'center'}});
   otherCurWrap.append(otherCurIn, cancelOtherBtn);
 
   const curWrap = el('div');
   curWrap.append(curDD, otherCurWrap);
 
-  const fxIn = el('input', {type:'text', style:{width:'120px', textAlign:'right'}, placeholder:'0.00000'});
-  fxIn.value = ln.fxRate;
-  fxIn.readOnly = !ln.customCurrency && ln.currency === baseCur;
-  fxIn.addEventListener('input', () => {
-    ln.fxRate = fxIn.value;
-    const rate = parseFloat(fxIn.value);
-    if (ln.currency && ln.currency !== baseCur && rate > 0) state.fxRateMemory[ln.currency] = fxIn.value;
-    recalc();
-    if (progAreaEl) progAreaEl._refresh();
-  });
+  // Row 1: Date | Vendor | Currency | FX rate
+  const row1 = el('div', {className:'kb-line-section row1'});
+  row1.append(
+    kbField('Date', dateIn),
+    kbField('Vendor', vendIn),
+    kbField('Currency', curWrap),
+    kbField('FX rate', fxIn)
+  );
+  blk.appendChild(row1);
 
-  blk.appendChild(el('div', {className:'frow'}, [
-    el('div', {className:'fgrp'}, [el('label', null, 'Date'), dateIn]),
-    el('div', {className:'fgrp grow'}, [el('label', null, 'Vendor'), vendIn]),
-    el('div', {className:'fgrp'}, [el('label', null, 'Currency'), curWrap]),
-    el('div', {className:'fgrp'}, [el('label', null, 'FX rate'), fxIn]),
-  ]));
-
-  // Row 2: Description, Receipt, Amount
-  const descIn = el('input', {type:'text', value: ln.description, placeholder:'Description'});
+  // Description, Receipt, Amount
+  const descIn = el('input', {className:'kb-input', type:'text', value: ln.description, placeholder:'Description'});
   descIn.addEventListener('input', () => { ln.description = descIn.value; });
 
   const receiptSel = makeSelect(['Yes','No'], ln.hasReceipt ? 'Yes' : 'No', v => {
@@ -691,24 +1002,27 @@ function renderLine(ln, item) {
     receiptArea.appendChild(buildReceiptArea(ln));
   });
 
-  const amtIn = el('input', {type:'text', value: ln.amount, style:{width:'120px', textAlign:'right'}, placeholder:'0.00'});
+  const amtIn = el('input', {className:'kb-input num', type:'text', value: ln.amount, placeholder:'0.00', style:{minWidth:'0'}});
   amtIn.addEventListener('input', () => { ln.amount = amtIn.value; recalc(); if (progAreaEl) progAreaEl._refresh(); });
 
-  blk.appendChild(el('div', {className:'frow'}, [
-    el('div', {className:'fgrp grow'}, [el('label', null, 'Description'), descIn]),
-    el('div', {className:'fgrp'}, [el('label', null, 'Receipt'), receiptSel]),
-    el('div', {className:'fgrp'}, [el('label', null, 'Amount'), amtIn]),
-  ]));
+  const row2 = el('div', {className:'kb-line-section row2'});
+  row2.append(
+    kbField('Description', descIn),
+    kbField('Receipt', receiptSel),
+    kbField('Amount', amtIn)
+  );
+  blk.appendChild(row2);
 
-  // Row 3: Account, Program
+  // Account, Program
   const acctSel = makeSelect(CFG.accounts || [], ln.account, v => { ln.account = v; }, 'Select account');
   progAreaEl = buildProgramArea(ln);
-  const progGrp = el('div', {className:'fgrp grow'}, [el('label', null, 'Program'), progAreaEl]);
 
-  blk.appendChild(el('div', {className:'frow'}, [
-    el('div', {className:'fgrp grow'}, [el('label', null, 'Account'), acctSel]),
-    progGrp,
-  ]));
+  const row3 = el('div', {className:'kb-line-section row3'});
+  row3.append(
+    kbField('Account', acctSel),
+    kbField('Program', progAreaEl)
+  );
+  blk.appendChild(row3);
 
   // Receipt area
   const receiptArea = el('div');
@@ -716,47 +1030,41 @@ function renderLine(ln, item) {
   blk.appendChild(receiptArea);
 
   // Remove line
-  const rmBtn = el('button', {className:'btn btn-rm', style:{marginTop:'6px'}, onClick: () => {
+  const rmBtn = el('button', {className:'kb-btn kb-btn--danger', style:{marginTop:'8px'}, onClick: () => {
     item.lines = item.lines.filter(l => l.id !== ln.id);
     blk.remove();
     recalc();
-  }}, '✕ Remove line');
+  }}, 'Remove line');
   blk.appendChild(rmBtn);
 
   return blk;
 }
 
 function buildReceiptArea(ln) {
-  const area = el('div', {className:'receipt-area'});
+  const area = el('div', {className:'rb-receipt-area'});
   if (ln.hasReceipt) {
-    // List uploaded files
     ln.receipts.forEach((r, i) => {
-      area.appendChild(el('div', {className:'receipt-file'}, [
-        el('span', {className:'name'}, r.name),
-        el('button', {className:'btn btn-rm', onClick: () => {
-          ln.receipts.splice(i, 1);
-          area.replaceWith(buildReceiptArea(ln));
-          saveState();
-        }}, '✕')
-      ]));
+      const row = el('div', {className:'rb-receipt'});
+      row.innerHTML = `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 1.5A1.5 1.5 0 0 1 4.5 0h4.7c.4 0 .8.16 1.06.44l2.3 2.3c.28.27.44.66.44 1.06v8.7A1.5 1.5 0 0 1 11.5 16h-7A1.5 1.5 0 0 1 3 14.5zM9 1.5V4h2.5z"/></svg>`;
+      row.appendChild(el('span', {className:'name'}, r.name));
+      const rmBtn = el('button', {className:'rm', type:'button'}, '×');
+      rmBtn.addEventListener('click', () => { ln.receipts.splice(i, 1); area.replaceWith(buildReceiptArea(ln)); saveState(); });
+      row.appendChild(rmBtn);
+      area.appendChild(row);
     });
-    // Add button
     const fileIn = el('input', {type:'file', accept:'.pdf,.jpg,.jpeg,.png', style:{display:'none'}});
     fileIn.addEventListener('change', async () => {
-      for (const f of fileIn.files) {
-        ln.receipts.push({ id: uid(), name: f.name, type: f.type, data: await f.arrayBuffer() });
-      }
+      for (const f of fileIn.files) ln.receipts.push({ id: uid(), name: f.name, type: f.type, data: await f.arrayBuffer() });
       area.replaceWith(buildReceiptArea(ln));
       saveState();
     });
-    area.appendChild(el('button', {className:'btn btn-add', style:{marginTop:'4px'}, onClick: () => fileIn.click()}, '+ Add receipt'));
-    area.appendChild(fileIn);
+    const addBtn = el('button', {className:'kb-btn kb-btn--dashed', style:{marginTop:'6px'}, onClick: () => fileIn.click()}, '+ Add receipt');
+    area.append(addBtn, fileIn);
   } else {
-    const ta = el('textarea', {placeholder:'Explain why there is no receipt', rows:'2'});
+    const ta = el('textarea', {className:'kb-textarea rb-no-receipt', placeholder:'Explain why there is no receipt', rows:'2'});
     ta.value = ln.noReceiptExplanation || '';
     ta.addEventListener('input', () => { ln.noReceiptExplanation = ta.value; });
-    area.appendChild(el('label', {style:{fontSize:'12px', fontWeight:'600', color:'var(--muted)'}}, 'Explain why there is no receipt:'));
-    area.appendChild(ta);
+    area.appendChild(kbField('Reason for no receipt', ta));
   }
   return area;
 }
@@ -786,7 +1094,7 @@ function buildProgramArea(ln) {
       if (totalSpan) {
         const sum = ln.programs.reduce((s, pe) => s + (parseFloat(pe.percent) || 0), 0);
         totalSpan.textContent = sum.toFixed(2) + '%';
-        totalSpan.style.color = sum < 99.995 ? '#c6a800' : sum <= 100.005 ? '#2e7d32' : '#c62828';
+        totalSpan.style.color = sum < 99.995 ? 'var(--warning)' : sum <= 100.005 ? 'var(--success)' : 'var(--danger)';
       }
     }
 
@@ -797,57 +1105,45 @@ function buildProgramArea(ln) {
       }, 'Select program');
       progSel.style.flex = '1';
 
-      const otherIn = el('input', {type:'text', value: pe.programOther, placeholder:'Specify program',
-        style:{display: pe.program === 'Other' ? '' : 'none', marginTop:'4px', width:'100%'}});
+      const otherIn = el('input', {className:'kb-input', type:'text', value: pe.programOther, placeholder:'Specify program',
+        style:{display: pe.program === 'Other' ? '' : 'none', marginTop:'6px'}});
       otherIn.addEventListener('input', () => { pe.programOther = otherIn.value; });
 
       if (!isMulti) {
-        const addBtn = el('button', {type:'button', className:'btn btn-add'}, '+ Add program');
-        addBtn.addEventListener('click', () => {
-          ln.programs.push({program:'', percent:'', programOther:''});
-          rebuild();
-        });
+        const addBtn = el('button', {type:'button', className:'kb-btn kb-btn--dashed', style:{whiteSpace:'nowrap'}}, '+ Add program');
+        addBtn.addEventListener('click', () => { ln.programs.push({program:'', percent:'', programOther:''}); rebuild(); });
         const row = el('div', {style:{display:'flex', gap:'8px', alignItems:'center'}});
         row.append(progSel, addBtn);
         wrapper.append(row, otherIn);
       } else {
-        const pctIn = el('input', {type:'number', min:'0', max:'100', step:'0.01',
-          value: pe.percent, style:{width:'70px', textAlign:'right'}});
+        const pctIn = el('input', {className:'kb-input num', type:'number', min:'0', max:'100', step:'0.01',
+          value: pe.percent, style:{width:'80px'}});
         pctIn.addEventListener('input', () => { pe.percent = pctIn.value; updateDerived(); });
 
-        const amtSpan = el('span', {style:{fontSize:'13px', color:'var(--muted)', whiteSpace:'nowrap'}});
+        const amtSpan = el('span', {className:'kb-mono', style:{fontSize:'var(--fs-small)', color:'var(--text-muted)', whiteSpace:'nowrap'}});
         amtSpans.push(amtSpan);
 
-        const rmBtn = el('button', {type:'button', className:'btn btn-rm', style:{padding:'3px 7px'}}, '×');
-        rmBtn.addEventListener('click', () => {
-          ln.programs.splice(pi, 1);
-          rebuild();
-        });
+        const rmBtn = el('button', {type:'button', className:'kb-btn kb-btn--danger', style:{padding:'4px 8px'}}, '×');
+        rmBtn.addEventListener('click', () => { ln.programs.splice(pi, 1); rebuild(); });
 
-        const row = el('div', {style:{display:'flex', gap:'8px', alignItems:'center', marginBottom:'4px'}});
+        const row = el('div', {style:{display:'flex', gap:'8px', alignItems:'center', marginBottom:'6px', flexWrap:'wrap'}});
         row.append(progSel,
-          el('span', {style:{fontSize:'13px', color:'var(--muted)', whiteSpace:'nowrap'}}, 'Percent:'),
+          el('span', {style:{fontSize:'var(--fs-small)', color:'var(--text-muted)', whiteSpace:'nowrap'}}, '%:'),
           pctIn,
-          el('span', {style:{fontSize:'13px'}}, '%'),
-          el('span', {style:{fontSize:'13px', color:'var(--muted)'}}, '–'),
-          amtSpan,
-          rmBtn);
+          el('span', {style:{fontSize:'var(--fs-small)', color:'var(--text-muted)'}}, '–'),
+          amtSpan, rmBtn);
         wrapper.append(row, otherIn);
       }
     });
 
     if (isMulti) {
-      totalSpan = el('span', {style:{fontWeight:'600', fontSize:'13px'}});
-      const totalRow = el('div',
-        {style:{display:'flex', justifyContent:'flex-end', alignItems:'center', gap:'6px', marginTop:'4px', marginBottom:'4px'}},
-        [el('span', {style:{fontSize:'13px', color:'var(--muted)'}}, 'Total percent:'), totalSpan]);
+      totalSpan = el('span', {className:'kb-mono', style:{fontWeight:'600', fontSize:'var(--fs-small)'}});
+      const totalRow = el('div', {style:{display:'flex', justifyContent:'flex-end', alignItems:'center', gap:'6px', marginTop:'4px', marginBottom:'4px'}},
+        [el('span', {style:{fontSize:'var(--fs-small)', color:'var(--text-muted)'}}, 'Total:'), totalSpan]);
       wrapper.appendChild(totalRow);
 
-      const addBtn = el('button', {type:'button', className:'btn btn-add', style:{marginTop:'2px'}}, '+ Add program');
-      addBtn.addEventListener('click', () => {
-        ln.programs.push({program:'', percent:'', programOther:''});
-        rebuild();
-      });
+      const addBtn = el('button', {type:'button', className:'kb-btn kb-btn--dashed', style:{marginTop:'4px'}}, '+ Add program');
+      addBtn.addEventListener('click', () => { ln.programs.push({program:'', percent:'', programOther:''}); rebuild(); });
       wrapper.appendChild(addBtn);
     }
 
@@ -864,42 +1160,42 @@ function validate(checkReceipts = true) {
   const errs = [];
   if (!state.staff.trim()) errs.push('Staff name is required.');
   if (!state.periodFrom || !state.periodTo) errs.push('Period dates are required.');
-  if (state.items.length === 0) errs.push('Add at least one item.');
+  if (state.items.length === 0) errs.push('Add at least one expense item.');
   state.items.forEach((item, ii) => {
     const idx = ii + 1;
-    if (!item.name.trim()) errs.push(`Item ${idx}: Name is required.`);
-    if (item.lines.length === 0) errs.push(`Item ${idx}: Add at least one line.`);
+    if (!item.name.trim()) errs.push(`Item ${idx}: name is required.`);
+    if (item.lines.length === 0) errs.push(`Item ${idx}: add at least one line.`);
     item.lines.forEach((ln, li) => {
       const lx = `Item ${idx}, line ${li+1}`;
-      if (!ln.date) errs.push(`${lx}: Date is required.`);
-      if (!ln.description.trim()) errs.push(`${lx}: Description is required.`);
-      if (!ln.vendor.trim()) errs.push(`${lx}: Vendor is required.`);
+      if (!ln.date) errs.push(`${lx}: date is required.`);
+      if (!ln.description.trim()) errs.push(`${lx}: description is required.`);
+      if (!ln.vendor.trim()) errs.push(`${lx}: vendor is required.`);
       const amt = parseFloat(ln.amount);
-      if (isNaN(amt) || amt <= 0) errs.push(`${lx}: Amount must be a positive number.`);
+      if (isNaN(amt) || amt <= 0) errs.push(`${lx}: amount must be a positive number.`);
       if (ln.currency !== state.baseCurrency) {
         const rate = parseFloat(ln.fxRate);
         if (isNaN(rate) || rate <= 0) errs.push(`${lx}: FX rate must be a positive number.`);
       }
-      if (!ln.account) errs.push(`${lx}: Account is required.`);
+      if (!ln.account) errs.push(`${lx}: account is required.`);
       const progs = ln.programs || [];
       if (progs.length === 0 || !progs[0].program) {
-        errs.push(`${lx}: Program is required.`);
+        errs.push(`${lx}: program is required.`);
       } else {
         progs.forEach((pe, pi) => {
-          if (!pe.program) errs.push(`${lx}: Program ${pi+1} selection is required.`);
-          if (pe.program === 'Other' && !pe.programOther.trim()) errs.push(`${lx}: Please specify program ${pi+1}.`);
+          if (!pe.program) errs.push(`${lx}: program ${pi+1} selection is required.`);
+          if (pe.program === 'Other' && !pe.programOther.trim()) errs.push(`${lx}: please specify program ${pi+1}.`);
         });
         if (progs.length > 1) {
           progs.forEach((pe, pi) => {
             const pct = parseFloat(pe.percent);
-            if (isNaN(pct) || pct <= 0) errs.push(`${lx}: Percent for program ${pi+1} must be a positive number.`);
+            if (isNaN(pct) || pct <= 0) errs.push(`${lx}: percent for program ${pi+1} must be a positive number.`);
           });
           const total = progs.reduce((s, pe) => s + (parseFloat(pe.percent) || 0), 0);
-          if (Math.abs(total - 100) > 0.005) errs.push(`${lx}: Program percentages must total 100% (currently ${total.toFixed(2)}%).`);
+          if (Math.abs(total - 100) > 0.005) errs.push(`${lx}: program percentages must total 100% (currently ${total.toFixed(2)}%).`);
         }
       }
-      if (checkReceipts && ln.hasReceipt && ln.receipts.length === 0) errs.push(`${lx}: Upload at least one receipt, or select "No" for receipt.`);
-      if (!ln.hasReceipt && !ln.noReceiptExplanation.trim()) errs.push(`${lx}: Explain why there is no receipt.`);
+      if (checkReceipts && ln.hasReceipt && ln.receipts.length === 0) errs.push(`${lx}: upload at least one receipt, or select "No" for receipt.`);
+      if (!ln.hasReceipt && !ln.noReceiptExplanation.trim()) errs.push(`${lx}: explain why there is no receipt.`);
     });
   });
   return errs;
@@ -914,7 +1210,6 @@ async function generatePDF() {
   const M = { top: 50, bottom: 65, left: 50, right: 50 };
   const W = pageW - M.left - M.right;
 
-  // Fonts
   const fontBody = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
   const fontMono = await doc.embedFont(StandardFonts.Courier);
@@ -922,27 +1217,22 @@ async function generatePDF() {
   const szSm = sz - 1;
   const szLg = sz + 4;
   const szXl = sz + 6;
-  const lh = sz + 4; // line height
+  const lh = sz + 4;
 
-  // Colors
-  const accent = parseHex(CFG['accent-colour'] || '#1a3a5c');
+  const accent = parseHex(CFG['accent-colour'] || '#2F6FED');
   const black = rgb(0.13, 0.13, 0.13);
   const gray = rgb(0.45, 0.45, 0.45);
   const lineCol = rgb(0.75, 0.75, 0.75);
   const baseCur = state.baseCurrency;
 
-  // Logo
   let logoImage = null;
-  if (CFG.logo === true || CFG.logo === 'yes') {
-    logoImage = await loadLogo(doc);
-  }
+  if (CFG.logo === true || CFG.logo === 'yes') logoImage = await loadLogo(doc);
 
-  // State for page tracking
   const pages = [];
   let pg, y;
-  const receiptRefs = []; // { pageIdx, x, y, receiptKey }
-
+  const receiptRefs = [];
   let justBroke = false;
+
   function addPage(isFirst) {
     pg = doc.addPage([pageW, pageH]);
     pages.push(pg);
@@ -953,7 +1243,7 @@ async function generatePDF() {
 
   function needSpace(h) {
     justBroke = false;
-    if (y - h < M.bottom) { addPage(false); }
+    if (y - h < M.bottom) addPage(false);
   }
 
   function drawContHeader() {
@@ -966,19 +1256,15 @@ async function generatePDF() {
     y -= lh;
   }
 
-  // ---- PAGE 1 ----
   addPage(true);
 
-  // Logo + title
-  const mm10 = 10 * 2.83465; // 10 mm in points
+  const mm10 = 10 * 2.83465;
   if (logoImage) {
     const maxW = (CFG['logo-maxwidth'] || 4) * 28.3465;
     const scale = Math.min(maxW / logoImage.width, 50 / logoImage.height, 1);
     const lw = logoImage.width * scale, lhh = logoImage.height * scale;
-    // Absolute position: 10 mm from top-left, above all other content
     const logoTop = pageH - mm10;
     pg.drawImage(logoImage, { x: mm10, y: logoTop - lhh, width: lw, height: lhh });
-    // Push cursor below logo with a small gap before remaining header elements
     y = Math.min(y, logoTop - lhh - 8);
   } else if (CFG.organization) {
     pg.drawText(CFG.organization, { x: M.left, y, size: szLg, font: fontBold, color: accent });
@@ -989,14 +1275,12 @@ async function generatePDF() {
   pg.drawText(titleStr, { x: M.left + W - tw, y, size: szLg, font: fontBold, color: accent });
   y -= szLg + 8;
 
-  // Intro text
   if (CFG.intro) {
     const introLines = wrapText(CFG.intro, fontBody, sz, W);
     introLines.forEach(line => { pg.drawText(line, {x:M.left, y, size:sz, font:fontBody, color:gray}); y -= lh; });
     y -= 4;
   }
 
-  // Staff / Period / Currency
   const col2 = W * 0.5;
   const col3 = W * 0.8;
 
@@ -1009,14 +1293,11 @@ async function generatePDF() {
   pg.drawText(baseCur, {x:M.left+col3, y, size:sz, font:fontBold, color:black});
   y -= lh + 6;
 
-  // Divider
   pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:1.5, color:accent});
   y -= lh;
 
-  // Items
   state.items.forEach(item => {
-    // Item header
-    needSpace(lh * 6); // need room for at least header + one line
+    needSpace(lh * 6);
     pg.drawText('ITEM / PROJECT / TRAVEL', {x:M.left, y, size:szSm, font:fontBold, color:accent});
     const subStr = `Subtotal: ${baseCur} ${fmtAmt(item._subtotal)}`;
     const subW = fontBold.widthOfTextAtSize(subStr, sz);
@@ -1025,7 +1306,6 @@ async function generatePDF() {
     pg.drawText(item.name, {x:M.left, y, size:sz, font:fontBody, color:black});
     y -= lh + 4;
 
-    // Lines
     item.lines.forEach((ln, li) => {
       needSpace(lh * 7);
       if (li > 0 && !justBroke) {
@@ -1035,13 +1315,11 @@ async function generatePDF() {
       }
       const c1=0, c2=W*0.22, c3=W*0.68, c4=W*0.82;
 
-      // Row 1 labels: Date | Vendor | Currency | FX rate
       pg.drawText('Date', {x:M.left+c1, y, size:szSm-1, font:fontBold, color:gray});
       pg.drawText('Vendor', {x:M.left+c2, y, size:szSm-1, font:fontBold, color:gray});
       pg.drawText('Currency', {x:M.left+c3, y, size:szSm-1, font:fontBold, color:gray});
       const fxLbl = 'FX rate'; pg.drawText(fxLbl, {x:M.left+W-fontBold.widthOfTextAtSize(fxLbl,szSm-1), y, size:szSm-1, font:fontBold, color:gray});
       y -= lh;
-      // Row 1 values
       const dateInPeriod = isDateInPeriod(ln.date);
       const dateColor = dateInPeriod ? black : rgb(0.9, 0.33, 0);
       pg.drawText((ln.date || '–') + (dateInPeriod ? '' : ' (!)'), {x:M.left+c1, y, size:sz, font:fontBody, color:dateColor});
@@ -1052,12 +1330,10 @@ async function generatePDF() {
       pg.drawText(fxStr, {x:M.left+W-fxW, y, size:sz, font:fontBody, color:black});
       y -= lh + 2;
 
-      // Row 2 labels: Description | Receipt | Amount
       pg.drawText('Description', {x:M.left, y, size:szSm-1, font:fontBold, color:gray});
       pg.drawText('Receipt', {x:M.left+c3, y, size:szSm-1, font:fontBold, color:gray});
       const amtLbl = 'Amount'; pg.drawText(amtLbl, {x:M.left+W-fontBold.widthOfTextAtSize(amtLbl,szSm-1), y, size:szSm-1, font:fontBold, color:gray});
       y -= lh;
-      // Row 2 values
       pg.drawText(truncate(ln.description, fontBody, sz, (c3)-8), {x:M.left, y, size:sz, font:fontBody, color:black});
       pg.drawText(ln.hasReceipt ? 'Yes' : 'No', {x:M.left+c3, y, size:sz, font:fontBody, color:black});
       const amtStr = `${ln.currency} ${fmtAmt(ln.amount)}`;
@@ -1065,7 +1341,6 @@ async function generatePDF() {
       pg.drawText(amtStr, {x:M.left+W-amtW, y, size:sz, font:fontBody, color:black});
       y -= lh + 2;
 
-      // Row 3 labels
       pg.drawText('Account', {x:M.left, y, size:szSm-1, font:fontBold, color:gray});
       pg.drawText('Program', {x:M.left+W*0.5, y, size:szSm-1, font:fontBold, color:gray});
       y -= lh;
@@ -1079,7 +1354,7 @@ async function generatePDF() {
       } else {
         const lineBaseAmt = (() => { const a = parseFloat(ln.amount)||0, r = parseFloat(ln.fxRate)||1; return r>0?a/r:0; })();
         progs.forEach((pe, pi) => {
-          if (pi > 0) { needSpace(lh); }
+          if (pi > 0) needSpace(lh);
           const progStr = pe.program === 'Other' ? `Other: ${pe.programOther}` : (pe.program || '–');
           const pct = parseFloat(pe.percent) || 0;
           const progAmt = lineBaseAmt * pct / 100;
@@ -1091,7 +1366,6 @@ async function generatePDF() {
         });
       }
 
-      // Receipt reference or explanation
       if (ln.hasReceipt && ln.receipts.length > 0) {
         ln.receipts.forEach((r, ri) => {
           const key = `${ln.id}-${ri}`;
@@ -1112,10 +1386,8 @@ async function generatePDF() {
       }
       y -= 6;
     });
-
   });
 
-  // Grand total
   needSpace(lh * 2);
   pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:3, color:accent});
   y -= lh;
@@ -1125,7 +1397,7 @@ async function generatePDF() {
 
   // ---- RECEIPT PAGES ----
   const formPageCount = pages.length;
-  const receiptPageMap = {}; // key -> page number
+  const receiptPageMap = {};
 
   for (const item of state.items) {
     for (const ln of item.lines) {
@@ -1133,7 +1405,7 @@ async function generatePDF() {
       for (let ri = 0; ri < ln.receipts.length; ri++) {
         const r = ln.receipts[ri];
         const key = `${ln.id}-${ri}`;
-        const startPage = pages.length + 1; // 1-based
+        const startPage = pages.length + 1;
 
         if (r.type === 'application/pdf') {
           try {
@@ -1141,14 +1413,12 @@ async function generatePDF() {
             const srcPages = await doc.copyPages(srcDoc, srcDoc.getPageIndices());
             srcPages.forEach(p => { doc.addPage(p); pages.push(p); });
           } catch (e) {
-            // Failed to merge PDF — add error page
             const ep = doc.addPage([pageW, pageH]);
             pages.push(ep);
             ep.drawText(`Could not embed: ${r.name}`, {x:M.left, y:pageH-M.top, size:sz, font:fontBody, color:rgb(0.8,0,0)});
             ep.drawText(String(e.message || e), {x:M.left, y:pageH-M.top-lh, size:szSm, font:fontBody, color:gray});
           }
         } else {
-          // Image
           const rp = doc.addPage([pageW, pageH]);
           pages.push(rp);
           try {
@@ -1171,7 +1441,6 @@ async function generatePDF() {
     }
   }
 
-  // ---- FILL IN RECEIPT REFERENCES ----
   receiptRefs.forEach(ref => {
     const pageNum = receiptPageMap[ref.key];
     if (pageNum != null) {
@@ -1180,10 +1449,9 @@ async function generatePDF() {
     }
   });
 
-  // ---- FOOTERS ----
   const totalPages = pages.length;
-  const now = new Date();
-  const printed = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const nowTs = new Date();
+  const printed = `${nowTs.getFullYear()}-${String(nowTs.getMonth()+1).padStart(2,'0')}-${String(nowTs.getDate()).padStart(2,'0')} ${String(nowTs.getHours()).padStart(2,'0')}:${String(nowTs.getMinutes()).padStart(2,'0')}`;
 
   pages.forEach((p, i) => {
     const fy = M.bottom - 30;
@@ -1198,14 +1466,12 @@ async function generatePDF() {
     p.drawText(prStr, {x:M.left+W-prW, y:fy-lh+2, size:szSm-1, font:fontBody, color:gray});
   });
 
-  // ---- SAVE ----
   const pdfBytes = await doc.save();
   const blob = new Blob([pdfBytes], {type:'application/pdf'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  const fname = `reimbursement_${state.staff.replace(/\s+/g,'_')}_${state.periodFrom}_${state.periodTo}.pdf`;
-  a.download = fname;
+  a.download = `reimbursement_${state.staff.replace(/\s+/g,'_')}_${state.periodFrom}_${state.periodTo}.pdf`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -1215,24 +1481,17 @@ function parseHex(hex) {
   const h = hex.replace('#','');
   return PDFLib.rgb(parseInt(h.slice(0,2),16)/255, parseInt(h.slice(2,4),16)/255, parseInt(h.slice(4,6),16)/255);
 }
-
 function wrapText(text, font, size, maxW) {
   const words = text.split(/\s+/);
   const lines = [];
   let cur = '';
   words.forEach(w => {
     const test = cur ? cur + ' ' + w : w;
-    if (font.widthOfTextAtSize(test, size) > maxW) {
-      if (cur) lines.push(cur);
-      cur = w;
-    } else {
-      cur = test;
-    }
+    if (font.widthOfTextAtSize(test, size) > maxW) { if (cur) lines.push(cur); cur = w; } else cur = test;
   });
   if (cur) lines.push(cur);
   return lines.length ? lines : [''];
 }
-
 function truncate(text, font, size, maxW) {
   if (!text) return '–';
   if (font.widthOfTextAtSize(text, size) <= maxW) return text;
@@ -1240,7 +1499,6 @@ function truncate(text, font, size, maxW) {
   while (t.length > 1 && font.widthOfTextAtSize(t + '…', size) > maxW) t = t.slice(0, -1);
   return t + '…';
 }
-
 async function loadLogo(doc) {
   for (const ext of ['png','jpg']) {
     try {
@@ -1259,9 +1517,12 @@ async function onGenerate() {
   valBox.innerHTML = '';
   const errs = validate();
   if (errs.length) {
-    const box = el('div', {className:'val-summary'});
-    box.innerHTML = '<strong>Please fix the following:</strong><br>' + errs.join('<br>');
-    valBox.appendChild(box);
+    const note = el('div', {className:'kb-note kb-note--error'});
+    note.innerHTML = `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>`;
+    const txt = el('div');
+    txt.innerHTML = '<strong>Please fix the following before generating:</strong><br>' + errs.join('<br>');
+    note.appendChild(txt);
+    valBox.appendChild(note);
     valBox.scrollIntoView({behavior:'smooth'});
     return;
   }
@@ -1275,25 +1536,19 @@ async function onGenerate() {
     console.error(e);
   }
   btn.disabled = false;
-  btn.textContent = 'Generate Reimbursement Form';
+  btn.innerHTML = `<svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16"><path d="M8 1a1 1 0 0 1 1 1v6.6l2.3-2.3a1 1 0 0 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 1.4-1.4L7 8.6V2a1 1 0 0 1 1-1zM3 13h10a1 1 0 1 1 0 2H3a1 1 0 1 1 0-2z"/></svg>Generate PDF`;
 }
 
 // ========== NEW FORM HANDLER ==========
 async function onNewForm() {
-  const confirmed = await showConfirmModal('This will clear all current form data and start a fresh form.<br><br>Are you sure you want to continue?');
+  const confirmed = await showConfirmModal('This will clear all current form data and start a fresh form. Are you sure?');
   if (!confirmed) return;
   try { localStorage.removeItem('reimb-state'); } catch(e) {}
-  if (db) {
-    const keys = await dbAllKeys();
-    if (Array.isArray(keys)) for (const k of keys) await dbDel(k);
-  }
+  if (db) { const keys = await dbAllKeys(); if (Array.isArray(keys)) for (const k of keys) await dbDel(k); }
   const p = defaultPeriod();
-  state.periodFrom = p.from;
-  state.periodTo = p.to;
+  state.periodFrom = p.from; state.periodTo = p.to;
   state.baseCurrency = CFG['currency-base'];
-  state.fxRateMemory = {};
-  state.items = [newItem()];
-  state._grandTotal = 0;
+  state.fxRateMemory = {}; state.items = [newItem()]; state._grandTotal = 0;
   render();
 }
 
@@ -1303,14 +1558,17 @@ async function onSave() {
   valBox.innerHTML = '';
   const errs = validate(false);
   if (errs.length) {
-    const box = el('div', {className:'val-summary'});
-    box.innerHTML = '<strong>Please fix the following:</strong><br>' + errs.join('<br>');
-    valBox.appendChild(box);
+    const note = el('div', {className:'kb-note kb-note--error'});
+    note.innerHTML = `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>`;
+    const txt = el('div');
+    txt.innerHTML = '<strong>Please fix the following:</strong><br>' + errs.join('<br>');
+    note.appendChild(txt);
+    valBox.appendChild(note);
     valBox.scrollIntoView({behavior:'smooth'});
     return;
   }
   await saveState();
-  await showWarningModal('The information in this reimbursement form is now saved. It will be visible next time you visit this app in <strong>the same browser on the same device.</strong> If you delete your browser history/cache, the information will be lost.');
+  await showWarningModal('Form saved in this browser. The data will be visible next time you visit in <strong>this browser on this device</strong>. Clearing your browser history or cache will remove it.');
 }
 
 // ========== INIT ==========
@@ -1320,19 +1578,18 @@ async function init() {
     await initDB();
     state.baseCurrency = CFG['currency-base'];
     const p = defaultPeriod();
-    state.periodFrom = p.from;
-    state.periodTo = p.to;
+    state.periodFrom = p.from; state.periodTo = p.to;
     const hasState = await loadState();
     if (!hasState) state.items.push(newItem());
     render();
     document.addEventListener('input', scheduleAutoSave);
     document.addEventListener('change', scheduleAutoSave);
     const canSaveReceipts = !!db;
-    let entryMsg = 'This reimbursement form saves your input in the browser. As long as you do not delete your browser history/cache, the information is preserved and shown to you on the next visit in <strong>this</strong> browser.';
-    if (!canSaveReceipts) entryMsg += '<br><br>Please note that PDFs and images cannot be saved in the browser. Please do not attach receipts before you are ready to print and submit the reimbursement form.';
+    let entryMsg = 'This form saves your input in the browser. As long as you do not clear your browser history or cache, the information is preserved on your next visit.';
+    if (!canSaveReceipts) entryMsg += '<br><br>Note: PDFs and images cannot be saved in the browser. Do not attach receipts until you are ready to generate and submit the form.';
     await showWarningModal(entryMsg);
   } catch (e) {
-    $('#app').innerHTML = `<div class="wrap"><p style="color:var(--err)">Failed to load: ${e.message}</p></div>`;
+    $('#app').innerHTML = `<div class="kb-wrap"><div class="kb-note kb-note--error"><span>Failed to load: ${e.message}</span></div></div>`;
     console.error(e);
   }
 }
