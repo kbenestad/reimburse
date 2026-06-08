@@ -774,7 +774,7 @@ function render() {
   } else {
     logoBox.appendChild(appIconSVG());
   }
-  const orgSpan = el('span', {className:'org'}, CFG.organization || '');
+  const orgSpan = el('span', {className:'org'}, CFG.organization || 'kbenestad.reimburse');
   orgSpan.appendChild(el('small', null, 'Expense reimbursement'));
   brand.append(logoBox, orgSpan);
 
