@@ -338,7 +338,7 @@ body{
   font:700 var(--fs-h1)/1 var(--font-sans);
   color:var(--text);letter-spacing:-0.01em;user-select:none;
 }
-.app-wordmark svg{width:22px;height:22px;flex:0 0 22px;opacity:.55;}
+.app-wordmark svg{width:1em;height:1em;flex:0 0 1em;vertical-align:middle;}
 /* Language select in toolbar */
 .kb-toolbar-sel{
   font:600 var(--fs-small)/1 var(--font-sans);color:var(--text-muted);
@@ -780,7 +780,7 @@ function render() {
 
   const docTitle = el('div', {className:'kb-doctitle'});
   const wordmark = el('div', {className:'app-wordmark'});
-  wordmark.innerHTML = `reimburse<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="7.5" y="14" width="33" height="20" rx="3.2" stroke-width="2.8"/><circle cx="24" cy="24" r="4.6" stroke-width="2.6"/><path d="M12.7 21.4V26.6M35.3 21.4V26.6" stroke-width="2.6"/></svg>`;
+  wordmark.innerHTML = `reimburse<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#2f6fed"/><rect x="7.5" y="14" width="33" height="20" rx="3.2" fill="none" stroke="#fff" stroke-width="2.8"/><circle cx="24" cy="24" r="4.6" fill="none" stroke="#fff" stroke-width="2.6"/><path d="M12.7 21.4V26.6M35.3 21.4V26.6" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>`;
   const periodMeta = el('div', {className:'meta'});
   function updatePeriodMeta() {
     const from = state.periodFrom, to = state.periodTo;
