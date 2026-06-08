@@ -111,7 +111,7 @@ body{
 .kb-wrap{max-width:960px;margin:0 auto;padding:24px 20px 56px;}
 
 /* ── Toolbar ──────────────────────────────────────────────────────────────── */
-.kb-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;padding-right:2px;}
+.kb-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
 .kb-toolbar .spacer{flex:1;}
 .kb-seg{
   display:inline-flex;align-items:center;gap:2px;
@@ -333,22 +333,20 @@ body{
 .kb-footer .sep{opacity:.45;}
 
 /* ── App wordmark (toolbar left) ──────────────────────────────────────────── */
-.app-wordmark{
-  display:inline-flex;align-items:center;gap:8px;
-  font:700 var(--fs-h1)/1 var(--font-sans);
-  color:var(--text);letter-spacing:-0.01em;user-select:none;
-}
-.app-wordmark svg{width:1em;height:1em;flex:0 0 1em;vertical-align:middle;}
+.kb-doctitle h1{display:inline-flex;align-items:center;gap:9px;}
+.kb-doctitle h1 svg{flex-shrink:0;}
 /* Language select in toolbar */
-.kb-toolbar-sel{
+.kb-toolbar select{
   font:600 var(--fs-small)/1 var(--font-sans);color:var(--text-muted);
   background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--radius-sm);padding:5px 24px 5px 9px;
-  outline:none;appearance:none;cursor:pointer;transition:border-color .14s,box-shadow .14s;
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16' fill='none' stroke='%235F6975' stroke-width='1.6'><path d='M4 6l4 4 4-4'/></svg>");
-  background-repeat:no-repeat;background-position:right 7px center;
+  border-radius:var(--radius-sm);padding:5px 28px 5px 10px;
+  outline:none;appearance:none;cursor:pointer;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16' fill='none' stroke='%235F6975' stroke-width='1.8'><path d='M4 6l4 4 4-4'/></svg>");
+  background-repeat:no-repeat;background-position:right 8px center;
+  transition:border-color .14s,color .14s;
 }
-.kb-toolbar-sel:focus{border-color:var(--accent);box-shadow:var(--ring);}
+.kb-toolbar select:focus{border-color:var(--accent);box-shadow:var(--ring);color:var(--text);}
+.kb-toolbar select:hover{border-color:var(--accent-border);color:var(--text);}
 
 /* ── Loading ──────────────────────────────────────────────────────────────── */
 .kb-loading{text-align:center;padding:80px;color:var(--text-muted);}
@@ -705,19 +703,18 @@ function render() {
   // ── Toolbar ──────────────────────────────────────────────────────────────
   const toolbar = el('div', {className:'kb-toolbar'});
 
-  toolbar.appendChild(el('div', {className:'spacer'}));
-
-  // Language selector (only when CFG.languages has >1 entry)
+  // Language selector (only when CFG.languages has >1 entry) — goes first
   if (Array.isArray(CFG.languages) && CFG.languages.length > 1) {
-    const langSel = el('select', {className:'kb-toolbar-sel', 'aria-label':'Language'});
+    const langSel = el('select', {'aria-label':'Language'});
     CFG.languages.forEach(lang => {
       const code = typeof lang === 'object' ? lang.code : lang;
       const name = typeof lang === 'object' ? lang.name : lang;
-      const opt = el('option', {value: code}, name);
-      langSel.appendChild(opt);
+      langSel.appendChild(el('option', {value: code}, name));
     });
     toolbar.appendChild(langSel);
   }
+
+  toolbar.appendChild(el('div', {className:'spacer'}));
 
   // Font size
   const sizeSeg = el('div', {className:'kb-seg', role:'group', 'aria-label':'Text size'});
@@ -736,8 +733,8 @@ function render() {
 
   // Theme toggle (single icon button: moon = light mode, sun = dark mode)
   const themeBtn = el('button', {className:'kb-iconbtn', type:'button', 'aria-label':'Toggle theme'});
-  const moonSVG = `<svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16"><path d="M6 1a7 7 0 1 0 7 7 5.5 5.5 0 0 1-7-7z"/></svg>`;
-  const sunSVG  = `<svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16"><circle cx="8" cy="8" r="3"/><g stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="8" y1="1" x2="8" y2="3"/><line x1="8" y1="13" x2="8" y2="15"/><line x1="1" y1="8" x2="3" y2="8"/><line x1="13" y1="8" x2="15" y2="8"/><line x1="3.05" y1="3.05" x2="4.46" y2="4.46"/><line x1="11.54" y1="11.54" x2="12.95" y2="12.95"/><line x1="12.95" y1="3.05" x2="11.54" y2="4.46"/><line x1="4.46" y1="11.54" x2="3.05" y2="12.95"/></g></svg>`;
+  const moonSVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
+  const sunSVG  = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>`;
   const currentTheme = () => document.documentElement.getAttribute('data-theme') ||
     (window.matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
   const updateThemeBtn = () => { themeBtn.innerHTML = currentTheme() === 'dark' ? sunSVG : moonSVG; };
@@ -752,7 +749,7 @@ function render() {
 
   // About
   const aboutBtn = el('button', {className:'kb-iconbtn', type:'button', 'aria-label':'About', onClick: showAboutModal});
-  aboutBtn.innerHTML = `<svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zm.9 6.8H7.1v5.4h1.8V6.8zM8 3.3a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2z"/></svg>`;
+  aboutBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>`;
   toolbar.appendChild(aboutBtn);
   wrap.appendChild(toolbar);
 
@@ -779,8 +776,8 @@ function render() {
   brand.append(logoBox, orgSpan);
 
   const docTitle = el('div', {className:'kb-doctitle'});
-  const wordmark = el('div', {className:'app-wordmark'});
-  wordmark.innerHTML = `reimburse<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#2f6fed"/><rect x="7.5" y="14" width="33" height="20" rx="3.2" fill="none" stroke="#fff" stroke-width="2.8"/><circle cx="24" cy="24" r="4.6" fill="none" stroke="#fff" stroke-width="2.6"/><path d="M12.7 21.4V26.6M35.3 21.4V26.6" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>`;
+  const h1 = el('h1');
+  h1.innerHTML = `<svg width="24" height="24" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect width="48" height="48" rx="12" fill="var(--accent)"/><rect x="7.5" y="14" width="33" height="20" rx="3.2" fill="none" stroke="#fff" stroke-width="2.8"/><circle cx="24" cy="24" r="4.6" fill="none" stroke="#fff" stroke-width="2.6"/><path d="M12.7 21.4V26.6M35.3 21.4V26.6" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>reimburse`;
   const periodMeta = el('div', {className:'meta'});
   function fmtPeriodDate(iso) {
     const [y, m, d] = iso.split('-').map(Number);
@@ -794,7 +791,7 @@ function render() {
     else periodMeta.textContent = '';
   }
   updatePeriodMeta();
-  docTitle.append(wordmark, periodMeta);
+  docTitle.append(h1, periodMeta);
   hdr.append(brand, docTitle);
   wrap.appendChild(hdr);
 
