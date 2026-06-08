@@ -334,11 +334,11 @@ body{
 
 /* ── App wordmark (toolbar left) ──────────────────────────────────────────── */
 .app-wordmark{
-  display:inline-flex;align-items:center;gap:6px;
-  font:600 var(--fs-small)/1 var(--font-sans);
-  color:var(--text-muted);letter-spacing:-0.01em;user-select:none;
+  display:inline-flex;align-items:center;gap:8px;
+  font:700 var(--fs-h1)/1 var(--font-sans);
+  color:var(--text);letter-spacing:-0.01em;user-select:none;
 }
-.app-wordmark svg{width:14px;height:14px;flex:0 0 14px;opacity:.75;}
+.app-wordmark svg{width:22px;height:22px;flex:0 0 22px;opacity:.55;}
 /* Language select in toolbar */
 .kb-toolbar-sel{
   font:600 var(--fs-small)/1 var(--font-sans);color:var(--text-muted);
@@ -705,10 +705,6 @@ function render() {
   // ── Toolbar ──────────────────────────────────────────────────────────────
   const toolbar = el('div', {className:'kb-toolbar'});
 
-  // Wordmark (glyph + "reimburse")
-  const wordmark = el('div', {className:'app-wordmark'});
-  wordmark.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="7.5" y="14" width="33" height="20" rx="3.2" stroke-width="2.8"/><circle cx="24" cy="24" r="4.6" stroke-width="2.6"/><path d="M12.7 21.4V26.6M35.3 21.4V26.6" stroke-width="2.6"/></svg>reimburse`;
-  toolbar.appendChild(wordmark);
   toolbar.appendChild(el('div', {className:'spacer'}));
 
   // Language selector (only when CFG.languages has >1 entry)
@@ -782,11 +778,19 @@ function render() {
   orgSpan.appendChild(el('small', null, 'Expense reimbursement'));
   brand.append(logoBox, orgSpan);
 
-  const now = new Date();
-  const dateStr = now.toLocaleDateString('en-GB', {day:'numeric', month:'long', year:'numeric'});
   const docTitle = el('div', {className:'kb-doctitle'});
-  docTitle.appendChild(el('h1', null, 'Reimbursement'));
-  docTitle.appendChild(el('div', {className:'meta'}, `Claim · ${dateStr}`));
+  const wordmark = el('div', {className:'app-wordmark'});
+  wordmark.innerHTML = `reimburse<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="7.5" y="14" width="33" height="20" rx="3.2" stroke-width="2.8"/><circle cx="24" cy="24" r="4.6" stroke-width="2.6"/><path d="M12.7 21.4V26.6M35.3 21.4V26.6" stroke-width="2.6"/></svg>`;
+  const periodMeta = el('div', {className:'meta'});
+  function updatePeriodMeta() {
+    const from = state.periodFrom, to = state.periodTo;
+    if (from && to) periodMeta.textContent = `${from} – ${to}`;
+    else if (from) periodMeta.textContent = `From ${from}`;
+    else if (to) periodMeta.textContent = `Until ${to}`;
+    else periodMeta.textContent = 'No period selected';
+  }
+  updatePeriodMeta();
+  docTitle.append(wordmark, periodMeta);
   hdr.append(brand, docTitle);
   wrap.appendChild(hdr);
 
@@ -806,11 +810,11 @@ function render() {
 
   const fromInput = el('input', {className:'kb-input', type:'date'});
   fromInput.value = state.periodFrom;
-  fromInput.addEventListener('change', () => { state.periodFrom = fromInput.value; });
+  fromInput.addEventListener('change', () => { state.periodFrom = fromInput.value; updatePeriodMeta(); });
 
   const toInput = el('input', {className:'kb-input', type:'date'});
   toInput.value = state.periodTo;
-  toInput.addEventListener('change', () => { state.periodTo = toInput.value; });
+  toInput.addEventListener('change', () => { state.periodTo = toInput.value; updatePeriodMeta(); });
 
   const baseCurDD = makeCDD(CFG.currencies || [], state.baseCurrency, code => {
     state.baseCurrency = code;
