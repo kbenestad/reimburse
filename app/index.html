@@ -1391,7 +1391,7 @@ async function generatePDF() {
     lbl('Staff', M.left, labY);
     lbl('Period', M.left + W * 0.45, labY);
     pg.drawText(state.staff, { x:M.left, y:valY, size:sz, font:fontBold, color:clrText });
-    mono(`${state.periodFrom} to ${state.periodTo}`, M.left + W * 0.45, valY);
+    val(`${state.periodFrom} to ${state.periodTo}`, M.left + W * 0.45, valY);
 
     y -= stripH + 12;
   }
@@ -1432,8 +1432,8 @@ async function generatePDF() {
   const nowD = new Date();
   const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const claimDate = `Claim · ${nowD.getDate()} ${MONTHS[nowD.getMonth()]} ${nowD.getFullYear()}`;
-  const claimDateW = fontMono.widthOfTextAtSize(claimDate, szSm);
-  pg.drawText(claimDate, { x: M.left + W - claimDateW, y: hdrTopY - 15 - szLg - 4, size: szSm, font: fontMono, color: clrMuted });
+  const claimDateW = fontBody.widthOfTextAtSize(claimDate, szSm);
+  pg.drawText(claimDate, { x: M.left + W - claimDateW, y: hdrTopY - 15 - szLg - 4, size: szSm, font: fontBody, color: clrMuted });
 
   y = hdrTopY - boxSize - 10;
 
@@ -1463,10 +1463,10 @@ async function generatePDF() {
   lbl('Currency', M.left + iC3, iLabY);
 
   pg.drawText(state.staff, { x: M.left, y: iValY, size: sz, font: fontBold, color: clrText });
-  mono(`${state.periodFrom} to ${state.periodTo}`, M.left + iC2, iValY);
+  val(`${state.periodFrom} to ${state.periodTo}`, M.left + iC2, iValY);
   pg.drawText(baseCur, { x: M.left + iC3, y: iValY, size: sz, font: fontBold, color: clrAccent });
 
-  y -= infoH + 14;
+  y -= infoH + 20;
 
   // ── Items ─────────────────────────────────────────────────────────────────
   state.items.forEach(item => {
@@ -1476,21 +1476,21 @@ async function generatePDF() {
     accentStripe(y);
     pg.drawText(item.name || '(no name)', { x: M.left + 8, y, size: sz, font: fontBold, color: clrTextSoft });
     const subStr = `${baseCur} ${fmtAmt(item._subtotal)}`;
-    const subW = fontMono.widthOfTextAtSize(subStr, sz);
-    pg.drawText(subStr, { x: M.left + W - subW, y, size: sz, font: fontMono, color: clrAccent });
+    const subW = fontBold.widthOfTextAtSize(subStr, sz);
+    pg.drawText(subStr, { x: M.left + W - subW, y, size: sz, font: fontBold, color: clrAccent });
     y -= lh + 2;
 
     // Hairline below section header
     pg.drawLine({ start:{x:M.left, y}, end:{x:M.left+W, y}, thickness:0.5, color:clrBorder });
-    y -= 8;
+    y -= 14;
 
     // Lines
     item.lines.forEach((ln, li) => {
       needSpace(lh * 9);
       if (li > 0 && !justBroke) {
-        y -= 4;
-        pg.drawLine({ start:{x:M.left, y}, end:{x:M.left+W, y}, thickness:0.3, color:clrBorder });
         y -= 8;
+        pg.drawLine({ start:{x:M.left, y}, end:{x:M.left+W, y}, thickness:0.3, color:clrBorder });
+        y -= 12;
       }
 
       const c1=0, c2=W*0.22, c3=W*0.64;
@@ -1502,17 +1502,17 @@ async function generatePDF() {
       const fxLblStr = 'FX RATE';
       pg.drawText(fxLblStr, { x: M.left + W - fontBold.widthOfTextAtSize(fxLblStr, szXs), y,
         size: szXs, font: fontBold, color: clrMuted });
-      y -= szXs + 4;
+      y -= szXs + 6;
 
       const dateInPeriod = isDateInPeriod(ln.date);
-      mono((ln.date || '–') + (dateInPeriod ? '' : ' (!)'), M.left + c1, y,
+      val((ln.date || '–') + (dateInPeriod ? '' : ' (!)'), M.left + c1, y,
         { color: dateInPeriod ? clrText : clrWarn });
       val(truncate(ln.vendor, fontBody, sz, (c3 - c2) - 8), M.left + c2, y);
       val(ln.currency || '–', M.left + c3, y);
       const fxStr = ln.currency === baseCur ? '–' : parseFloat(ln.fxRate).toFixed(5);
-      const fxW = fontMono.widthOfTextAtSize(fxStr, sz);
-      mono(fxStr, M.left + W - fxW, y);
-      y -= lh + 4;
+      const fxW = fontBody.widthOfTextAtSize(fxStr, sz);
+      val(fxStr, M.left + W - fxW, y);
+      y -= lh + 10;
 
       // Row 2 — Description | Receipt | Amount
       lbl('Description', M.left, y);
@@ -1520,19 +1520,19 @@ async function generatePDF() {
       const amtLblStr = 'AMOUNT';
       pg.drawText(amtLblStr, { x: M.left + W - fontBold.widthOfTextAtSize(amtLblStr, szXs), y,
         size: szXs, font: fontBold, color: clrMuted });
-      y -= szXs + 4;
+      y -= szXs + 6;
 
       val(truncate(ln.description, fontBody, sz, c3 - 8), M.left, y);
       val(ln.hasReceipt ? 'Yes' : 'No', M.left + c3, y);
       const amtStr = `${ln.currency} ${fmtAmt(ln.amount)}`;
-      const amtW = fontMono.widthOfTextAtSize(amtStr, sz);
-      mono(amtStr, M.left + W - amtW, y);
-      y -= lh + 4;
+      const amtW = fontBody.widthOfTextAtSize(amtStr, sz);
+      val(amtStr, M.left + W - amtW, y);
+      y -= lh + 10;
 
       // Row 3 — Account | Program
       lbl('Account', M.left, y);
       lbl('Program', M.left + W * 0.5, y);
-      y -= szXs + 4;
+      y -= szXs + 6;
 
       val(truncate(ln.account || '–', fontBody, sz, W * 0.5 - 8), M.left, y);
       const progs = ln.programs || [];
@@ -1540,7 +1540,7 @@ async function generatePDF() {
         const pe = progs[0] || {};
         const progStr = pe.program === 'Other' ? `Other: ${pe.programOther}` : (pe.program || '–');
         val(truncate(progStr, fontBody, sz, W * 0.5 - 8), M.left + W * 0.5, y);
-        y -= lh;
+        y -= lh + 4;
       } else {
         const lineBaseAmt = (() => { const a=parseFloat(ln.amount)||0, r=parseFloat(ln.fxRate)||1; return r>0?a/r:0; })();
         progs.forEach((pe, pi) => {
@@ -1550,8 +1550,8 @@ async function generatePDF() {
           const progAmt = lineBaseAmt * pct / 100;
           const suffix = `${pct.toFixed(2)}% · ${baseCur} ${fmtAmt(progAmt)}`;
           val(truncate(progStr, fontBody, sz, W * 0.42 - 8), M.left + W * 0.5, y);
-          const sfxW = fontMono.widthOfTextAtSize(suffix, szSm);
-          pg.drawText(suffix, { x: M.left + W - sfxW, y, size: szSm, font: fontMono, color: clrMuted });
+          const sfxW = fontBody.widthOfTextAtSize(suffix, szSm);
+          pg.drawText(suffix, { x: M.left + W - sfxW, y, size: szSm, font: fontBody, color: clrMuted });
           y -= lh;
         });
       }
@@ -1574,7 +1574,7 @@ async function generatePDF() {
       y -= 6;
     });
 
-    y -= 10;
+    y -= 16;
   });
 
   // Grand total
@@ -1663,7 +1663,8 @@ async function generatePDF() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `reimbursement_${state.staff.replace(/\s+/g,'_')}_${state.periodFrom}_${state.periodTo}.pdf`;
+  const docDate = new Date().toISOString().slice(0,10);
+  a.download = `${state.staff.replace(/\s+/g,'_')}_${docDate}_Reimbursement.pdf`;
   a.click();
   URL.revokeObjectURL(url);
 }
