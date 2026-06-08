@@ -866,13 +866,13 @@ function render() {
   totals.appendChild(grandRow);
   actCard.appendChild(totals);
 
-  const actionRow = el('div', {style:{display:'flex', gap:'10px', marginTop:'16px'}});
+  const actionRow = el('div', {style:{display:'flex', gap:'10px', marginTop:'8px'}});
   const actionFeedback = el('div', {style:{marginTop:'10px'}});
 
-  const saveBtn = el('button', {className:'kb-btn kb-btn--ghost', style:{flex:'0 0 20%'}}, 'Save');
+  const saveBtn = el('button', {className:'kb-btn kb-btn--ghost kb-btn--lg', style:{flex:'2'}}, 'Save');
   saveBtn.addEventListener('click', () => saveState());
 
-  const validateBtn = el('button', {className:'kb-btn kb-btn--ghost', style:{flex:'0 0 20%'}}, 'Validate');
+  const validateBtn = el('button', {className:'kb-btn kb-btn--ghost kb-btn--lg', style:{flex:'2'}}, 'Validate');
   validateBtn.addEventListener('click', () => {
     actionFeedback.innerHTML = '';
     const errs = validate();
@@ -890,8 +890,8 @@ function render() {
     }
   });
 
-  const genBtn = el('button', {className:'kb-btn kb-btn--primary kb-btn--lg', id:'gen-btn', style:{flex:'0 0 calc(60% - 20px)'}, onClick: onGenerate});
-  genBtn.innerHTML = `<svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16"><path d="M8 1a1 1 0 0 1 1 1v6.6l2.3-2.3a1 1 0 0 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 1.4-1.4L7 8.6V2a1 1 0 0 1 1-1zM3 13h10a1 1 0 1 1 0 2H3a1 1 0 1 1 0-2z"/></svg>Download reimbursement form`;
+  const genBtn = el('button', {className:'kb-btn kb-btn--primary kb-btn--lg', id:'gen-btn', style:{flex:'6'}, onClick: onGenerate});
+  genBtn.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M8 2v9m0 0 4-4M8 11 4 7"/><line x1="2" y1="14" x2="14" y2="14"/></svg>Download reimbursement form`;
 
   actionRow.append(saveBtn, validateBtn, genBtn);
   actCard.append(actionRow, actionFeedback);
