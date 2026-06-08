@@ -782,12 +782,16 @@ function render() {
   const wordmark = el('div', {className:'app-wordmark'});
   wordmark.innerHTML = `reimburse<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="12" fill="#2f6fed"/><rect x="7.5" y="14" width="33" height="20" rx="3.2" fill="none" stroke="#fff" stroke-width="2.8"/><circle cx="24" cy="24" r="4.6" fill="none" stroke="#fff" stroke-width="2.6"/><path d="M12.7 21.4V26.6M35.3 21.4V26.6" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>`;
   const periodMeta = el('div', {className:'meta'});
+  function fmtPeriodDate(iso) {
+    const [y, m, d] = iso.split('-').map(Number);
+    return `${d} ${new Date(y, m-1, 1).toLocaleString('en-GB', {month:'long'})}`;
+  }
   function updatePeriodMeta() {
     const from = state.periodFrom, to = state.periodTo;
-    if (from && to) periodMeta.textContent = `${from} – ${to}`;
-    else if (from) periodMeta.textContent = `From ${from}`;
-    else if (to) periodMeta.textContent = `Until ${to}`;
-    else periodMeta.textContent = 'No period selected';
+    if (from && to) periodMeta.textContent = `${fmtPeriodDate(from)} – ${fmtPeriodDate(to)}`;
+    else if (from) periodMeta.textContent = `From ${fmtPeriodDate(from)}`;
+    else if (to) periodMeta.textContent = `Until ${fmtPeriodDate(to)}`;
+    else periodMeta.textContent = '';
   }
   updatePeriodMeta();
   docTitle.append(wordmark, periodMeta);
@@ -831,6 +835,15 @@ function render() {
   claimGrid.appendChild(kbField('Period to', toInput));
   claimGrid.appendChild(kbField('Base currency', baseCurDD));
   claimCard.appendChild(claimGrid);
+
+  const fillPeriodBtn = el('button', {type:'button', className:'kb-btn kb-btn--ghost', style:{marginTop:'12px'}}, 'New claim');
+  fillPeriodBtn.addEventListener('click', () => {
+    const p = defaultPeriod();
+    state.periodFrom = p.from; state.periodTo = p.to;
+    fromInput.value = p.from; toInput.value = p.to;
+    updatePeriodMeta();
+  });
+  claimCard.appendChild(fillPeriodBtn);
   wrap.appendChild(claimCard);
 
   // ── Expenses card ─────────────────────────────────────────────────────────
