@@ -825,7 +825,7 @@ function render() {
   });
 
   const claimCard = el('div', {className:'kb-card'});
-  claimCard.appendChild(el('h2', {className:'kb-card__title'}, 'Claimant'));
+
   const claimGrid = el('div', {className:'kb-grid claim-grid', style:{gridTemplateColumns:'2fr 0.85fr 0.85fr 0.5fr', alignItems:'end'}});
   claimGrid.appendChild(kbField('Staff', staffInput));
   claimGrid.appendChild(kbField('Period from', fromInput));
