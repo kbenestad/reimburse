@@ -521,7 +521,7 @@ function newItem() { return { id: uid(), name: '', lines: [newLine()], _subtotal
 function newLine() {
   return {
     id: uid(), date: state.periodFrom || '', description: '', currency: state.baseCurrency,
-    fxRate: '1.00000', vendor: '', hasReceipt: true, receipts: [],
+    fxRate: '1.00000', fxDir: 'foreign', vendor: '', hasReceipt: true, receipts: [],
     noReceiptExplanation: '', amount: '', account: '', customCurrency: false,
     programs: [{ program: '', percent: '', programOther: '' }]
   };
@@ -563,7 +563,7 @@ async function saveState() {
       id: item.id, name: item.name,
       lines: item.lines.map(ln => ({
         id: ln.id, date: ln.date, description: ln.description,
-        currency: ln.currency, fxRate: ln.fxRate, vendor: ln.vendor,
+        currency: ln.currency, fxRate: ln.fxRate, fxDir: ln.fxDir || 'foreign', vendor: ln.vendor,
         hasReceipt: ln.hasReceipt, noReceiptExplanation: ln.noReceiptExplanation,
         amount: ln.amount, account: ln.account, customCurrency: ln.customCurrency || false,
         programs: ln.programs,
@@ -599,7 +599,7 @@ async function loadState() {
         for (const ld of (id.lines || [])) {
           const ln = {
             id: ld.id, date: ld.date, description: ld.description,
-            currency: ld.currency, fxRate: ld.fxRate, vendor: ld.vendor,
+            currency: ld.currency, fxRate: ld.fxRate, fxDir: ld.fxDir || 'foreign', vendor: ld.vendor,
             hasReceipt: ld.hasReceipt, receipts: [],
             noReceiptExplanation: ld.noReceiptExplanation,
             amount: ld.amount, account: ld.account,
@@ -933,17 +933,58 @@ function renderLine(ln, item) {
   const vendIn = el('input', {className:'kb-input', type:'text', value: ln.vendor, placeholder:'Vendor name'});
   vendIn.addEventListener('input', () => { ln.vendor = vendIn.value; });
 
-  // FX
-  const fxIn = el('input', {className:'kb-input num', type:'text', placeholder:'0.00000', style:{minWidth:'0'}});
-  fxIn.value = ln.fxRate;
+  // FX — bidirectional rate entry
+  // Canonical: ln.fxRate is always "foreign per 1 base" (divide to get base amount).
+  // ln.fxDir controls display direction: 'foreign' = show canonical, 'base' = show 1/canonical.
+  const fxIn = el('input', {className:'kb-input num', type:'text', placeholder:'0.00000', style:{minWidth:'0', width:'90px'}});
+  const fxDirSel = el('select', {className:'kb-select', style:{padding:'0 20px 0 6px', fontSize:'var(--fs-small)', minWidth:'0', width:'auto'}});
+  const fxPerLbl = el('span', {style:{fontSize:'var(--fs-small)', color:'var(--text-muted)', whiteSpace:'nowrap', userSelect:'none'}});
+  const fxWrap = el('div', {style:{display:'flex', alignItems:'center', gap:'4px'}});
+  fxWrap.append(fxIn, fxDirSel, fxPerLbl);
+
+  function fxDisplayVal() {
+    if (!ln.fxRate || ln.fxRate === '' || ln.fxRate === '1.00000') return ln.fxRate;
+    const r = parseFloat(ln.fxRate);
+    if (ln.fxDir === 'base' && r > 0) return (1 / r).toFixed(5);
+    return ln.fxRate;
+  }
+  function fxStoreFromDisplay(displayVal) {
+    const v = parseFloat(displayVal);
+    if (isNaN(v) || v <= 0) { ln.fxRate = displayVal; return; }
+    ln.fxRate = ln.fxDir === 'base' ? (1 / v).toFixed(5) : displayVal;
+  }
+  function rebuildFxDirSel() {
+    const fcy = ln.currency || '???';
+    fxDirSel.innerHTML = '';
+    fxDirSel.append(
+      el('option', {value:'foreign'}, fcy),
+      el('option', {value:'base'}, baseCur)
+    );
+    fxDirSel.value = ln.fxDir || 'foreign';
+    fxPerLbl.textContent = 'per ' + (fxDirSel.value === 'foreign' ? baseCur : fcy);
+  }
+  function showFxControls(show) {
+    fxDirSel.style.display = show ? '' : 'none';
+    fxPerLbl.style.display = show ? '' : 'none';
+  }
+
+  fxIn.value = fxDisplayVal();
   fxIn.readOnly = !ln.customCurrency && ln.currency === baseCur;
-  if (fxIn.readOnly) fxIn.className = 'kb-input num';
+  rebuildFxDirSel();
+  showFxControls(ln.currency !== baseCur);
+
   fxIn.addEventListener('input', () => {
-    ln.fxRate = fxIn.value;
-    const rate = parseFloat(fxIn.value);
-    if (ln.currency && ln.currency !== baseCur && rate > 0) state.fxRateMemory[ln.currency] = fxIn.value;
+    fxStoreFromDisplay(fxIn.value);
+    const rate = parseFloat(ln.fxRate);
+    if (ln.currency && ln.currency !== baseCur && rate > 0) state.fxRateMemory[ln.currency] = ln.fxRate;
     recalc();
     if (progAreaEl) progAreaEl._refresh();
+  });
+
+  fxDirSel.addEventListener('change', () => {
+    ln.fxDir = fxDirSel.value;
+    fxIn.value = fxDisplayVal();
+    fxPerLbl.textContent = 'per ' + (ln.fxDir === 'foreign' ? baseCur : ln.currency || '???');
   });
 
   async function showFxModal(code) {
@@ -958,12 +999,17 @@ function renderLine(ln, item) {
 
   function applyFxCurrency(code) {
     if (code === baseCur) {
-      ln.fxRate = '1.00000'; fxIn.value = '1.00000'; fxIn.readOnly = true;
+      ln.fxRate = '1.00000'; ln.fxDir = 'foreign';
+      fxIn.value = '1.00000'; fxIn.readOnly = true;
+      showFxControls(false);
     } else {
       fxIn.readOnly = false;
       const mem = state.fxRateMemory[code];
-      if (mem) { ln.fxRate = mem; fxIn.value = mem; }
-      else if (ln.fxRate === '1.00000') { ln.fxRate = ''; fxIn.value = ''; }
+      if (mem) { ln.fxRate = mem; }
+      else if (ln.fxRate === '1.00000') { ln.fxRate = ''; }
+      rebuildFxDirSel();
+      fxIn.value = fxDisplayVal();
+      showFxControls(true);
     }
     recalc();
     if (progAreaEl) progAreaEl._refresh();
@@ -1019,7 +1065,7 @@ function renderLine(ln, item) {
     kbField('Date', dateIn),
     kbField('Vendor', vendIn),
     kbField('Currency', curWrap),
-    kbField('FX rate', fxIn)
+    kbField('FX rate', fxWrap)
   );
   blk.appendChild(row1);
 
