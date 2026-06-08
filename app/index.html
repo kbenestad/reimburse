@@ -1381,12 +1381,13 @@ async function generatePDF() {
 
   // Continuation header: light strip with staff + period
   function drawContHeader() {
-    const stripH = szXs + lh + 14;
+    const cPad = 7;
+    const stripH = 2 * cPad + szXs + 5 + sz;
     pg.drawRectangle({ x: 0, y: y - stripH, width: pageW, height: stripH, color: clrSurface2 });
     pg.drawLine({ start:{x:0, y}, end:{x:pageW, y}, thickness:0.5, color:clrBorder });
     pg.drawLine({ start:{x:0, y:y-stripH}, end:{x:pageW, y:y-stripH}, thickness:0.5, color:clrBorder });
 
-    const labY = y - 7;
+    const labY = y - Math.round(cPad + szXs * 0.72);
     const valY = labY - szXs - 5;
     lbl('Staff', M.left, labY);
     lbl('Period', M.left + W * 0.45, labY);
@@ -1399,47 +1400,38 @@ async function generatePDF() {
   // ── Page 1 ────────────────────────────────────────────────────────────────
   addPage(true);
 
-  // Header: brand block left | doc title right
+  // Header: org name left | REIMBURSEMENT right  (timesheet style)
   const hdrTopY = y;
-  const boxSize = 44;
+  const nowD = new Date();
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  const hdrNameSize = szLg;  // org name and title same size
+  const hdrNameY = hdrTopY - Math.round(hdrNameSize * 0.28);  // cap top near hdrTopY
 
   if (logoImage) {
     const maxWLogo = (CFG['logo-maxwidth'] || 4) * 28.3465;
-    const scale = Math.min(maxWLogo / logoImage.width, boxSize / logoImage.height, 1);
+    const scale = Math.min(maxWLogo / logoImage.width, hdrNameSize * 1.6 / logoImage.height, 1);
     const lw = logoImage.width * scale, lhImg = logoImage.height * scale;
     pg.drawImage(logoImage, { x: M.left, y: hdrTopY - lhImg, width: lw, height: lhImg });
   } else {
-    // Initials box (surface-2 fill, border, accent initials)
-    const raw = (CFG.organization || 'ORG').trim();
-    const initials = raw.split(/\s+/).map(w => w[0] || '').join('').toUpperCase().slice(0, 2) || '??';
-    pg.drawRectangle({ x: M.left, y: hdrTopY - boxSize, width: boxSize, height: boxSize,
-      color: clrSurface2, borderColor: clrBorder, borderWidth: 0.5 });
-    const initW = fontBold.widthOfTextAtSize(initials, szLg);
-    pg.drawText(initials, { x: M.left + (boxSize - initW) / 2, y: hdrTopY - boxSize / 2 - szLg * 0.35,
-      size: szLg, font: fontBold, color: clrAccent });
+    pg.drawText(CFG.organization || '', { x: M.left, y: hdrNameY, size: hdrNameSize, font: fontBold, color: clrText });
   }
+  const hdrSubtY = hdrNameY - hdrNameSize - 5;
+  pg.drawText('Expense reimbursement', { x: M.left, y: hdrSubtY, size: szSm, font: fontBody, color: clrMuted });
 
-  // Org name + subtitle
-  const orgX = M.left + boxSize + 11;
-  pg.drawText(CFG.organization || '', { x: orgX, y: hdrTopY - 15, size: sz + 2, font: fontBold, color: clrText });
-  pg.drawText('Expense reimbursement', { x: orgX, y: hdrTopY - 15 - (sz + 2) - 4, size: szSm, font: fontBody, color: clrMuted });
+  const titleStr = 'REIMBURSEMENT';
+  const titleW = fontBold.widthOfTextAtSize(titleStr, hdrNameSize);
+  pg.drawText(titleStr, { x: M.left + W - titleW, y: hdrNameY, size: hdrNameSize, font: fontBold, color: clrText });
 
-  // Title + claim date (right-aligned)
-  const titleStr = 'Reimbursement';
-  const titleW = fontBold.widthOfTextAtSize(titleStr, szLg);
-  pg.drawText(titleStr, { x: M.left + W - titleW, y: hdrTopY - 15, size: szLg, font: fontBold, color: clrText });
-
-  const nowD = new Date();
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const claimDate = `Claim · ${nowD.getDate()} ${MONTHS[nowD.getMonth()]} ${nowD.getFullYear()}`;
   const claimDateW = fontBody.widthOfTextAtSize(claimDate, szSm);
-  pg.drawText(claimDate, { x: M.left + W - claimDateW, y: hdrTopY - 15 - szLg - 4, size: szSm, font: fontBody, color: clrMuted });
+  pg.drawText(claimDate, { x: M.left + W - claimDateW, y: hdrSubtY, size: szSm, font: fontBody, color: clrMuted });
 
-  y = hdrTopY - boxSize - 10;
+  y = hdrSubtY - szSm - 12;
 
-  // Hairline below header
-  pg.drawLine({ start:{x:M.left, y}, end:{x:M.left+W, y}, thickness:0.5, color:clrBorder });
-  y -= 12;
+  // Thick accent divider below header
+  pg.drawLine({ start:{x:M.left, y}, end:{x:M.left+W, y}, thickness:2.5, color:clrAccent });
+  y -= 16;
 
   // Intro text
   if (CFG.intro) {
@@ -1448,13 +1440,14 @@ async function generatePDF() {
     y -= 6;
   }
 
-  // Staff / Period / Currency info block
-  const infoH = szXs + lh + 14;
+  // Staff / Period / Currency info block — equal visual padding top and bottom
+  const infoPad = 7;
+  const infoH = 2 * infoPad + szXs + 5 + sz;
   pg.drawRectangle({ x: M.left - 8, y: y - infoH, width: W + 16, height: infoH, color: clrSurface2 });
   pg.drawLine({ start:{x:M.left-8, y}, end:{x:M.left+W+8, y}, thickness:0.5, color:clrBorder });
   pg.drawLine({ start:{x:M.left-8, y:y-infoH}, end:{x:M.left+W+8, y:y-infoH}, thickness:0.5, color:clrBorder });
 
-  const iLabY = y - 7;
+  const iLabY = y - Math.round(infoPad + szXs * 0.72);
   const iValY = iLabY - szXs - 5;
   const iC2 = W * 0.45, iC3 = W * 0.78;
 
@@ -1472,17 +1465,18 @@ async function generatePDF() {
   state.items.forEach(item => {
     needSpace(lh * 7);
 
-    // Section header: accent stripe + item name left, subtotal right
-    accentStripe(y);
-    pg.drawText(item.name || '(no name)', { x: M.left + 8, y, size: sz, font: fontBold, color: clrTextSoft });
+    // Section header strip — equal visual padding, accent left bar
+    const secH = sz + 16;
+    const secTextY = Math.round(y - secH / 2 + sz * 0.22);
+    pg.drawRectangle({ x: M.left, y: y - secH, width: W, height: secH, color: clrSurface2 });
+    pg.drawLine({ start:{x:M.left, y}, end:{x:M.left+W, y}, thickness:0.5, color:clrBorder });
+    pg.drawLine({ start:{x:M.left, y:y-secH}, end:{x:M.left+W, y:y-secH}, thickness:0.5, color:clrBorder });
+    pg.drawRectangle({ x: M.left, y: y - secH, width: 3, height: secH, color: clrAccent });
+    pg.drawText(item.name || '(no name)', { x: M.left + 10, y: secTextY, size: sz, font: fontBold, color: clrTextSoft });
     const subStr = `${baseCur} ${fmtAmt(item._subtotal)}`;
     const subW = fontBold.widthOfTextAtSize(subStr, sz);
-    pg.drawText(subStr, { x: M.left + W - subW, y, size: sz, font: fontBold, color: clrAccent });
-    y -= lh + 2;
-
-    // Hairline below section header
-    pg.drawLine({ start:{x:M.left, y}, end:{x:M.left+W, y}, thickness:0.5, color:clrBorder });
-    y -= 14;
+    pg.drawText(subStr, { x: M.left + W - subW, y: secTextY, size: sz, font: fontBold, color: clrAccent });
+    y -= secH + 14;
 
     // Lines
     item.lines.forEach((ln, li) => {
@@ -1571,15 +1565,15 @@ async function generatePDF() {
         explLines.forEach(line => { needSpace(lh); val(line, M.left, y); y -= lh; });
       }
 
-      y -= 6;
+      y -= 2;
     });
 
-    y -= 16;
+    y -= 10;
   });
 
   // Grand total
   needSpace(lh * 3 + 6);
-  y -= 6;
+  y -= 4;
   pg.drawLine({ start:{x:M.left, y}, end:{x:M.left+W, y}, thickness:1.5, color:clrBorderStrong });
   y -= lh;
 
