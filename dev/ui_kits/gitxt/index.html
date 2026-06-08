@@ -1,0 +1,133 @@
+<!-- @dsCard group="gitxt" viewport="900x620" name="gitxt teletext" subtitle="Teletext-for-git — type a page number or use the FASTEXT bar" -->
+<!-- @startingPoint section="gitxt" subtitle="Teletext terminal with 3-digit page navigation" viewport="900x620" -->
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gitxt</title>
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  html, body { height: 100%; }
+  body { background: #07090c; display: grid; place-items: center; padding: 28px; }
+
+  .tx-stage { width: min(720px, 100%); }
+  .tx-screen {
+    background: #000; border-radius: 10px; padding: 26px 30px 22px;
+    font-family: var(--font-mono); font-weight: 500;
+    box-shadow: 0 0 0 2px #1a1f26, 0 30px 80px rgba(0,0,0,.7);
+    position: relative; overflow: hidden;
+  }
+  /* faint scanlines */
+  .tx-screen::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(to bottom, rgba(255,255,255,.025) 0 1px, transparent 1px 3px);
+    mix-blend-mode: overlay;
+  }
+  .tx-statusbar {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 16px; color: #e8ecf0; letter-spacing: .5px; margin-bottom: 18px;
+  }
+  .tx-statusbar .pg { color: #3fe0e0; font-weight: 600; }
+  .tx-statusbar .svc { color: #f2d44a; }
+  .tx-statusbar .clk { color: #5fd28a; font-variant-numeric: tabular-nums; }
+
+  .tx-body { min-height: 340px; }
+  .tx-row { font-size: 19px; line-height: 1.5; letter-spacing: .4px; color: #e8ecf0; white-space: pre-wrap; }
+  .tx-title { font-size: 40px; font-weight: 800; line-height: 1.05; letter-spacing: 1px; margin: 2px 0 8px; text-transform: lowercase; }
+  .tx-link { cursor: pointer; }
+  .tx-link:hover { background: rgba(255,255,255,.12); }
+
+  .tx-notfound { color: #ff6b6b; }
+
+  .tx-fastext { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 18px; }
+  .tx-fx { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 5px;
+    cursor: pointer; color: #000; font-size: 14px; }
+  .tx-fx b { font-size: 13px; font-weight: 700; }
+  .tx-fx span { font-size: 12px; opacity: .8; }
+  .tx-fx:hover { filter: brightness(1.12); }
+  .tx-fx--red { background: #ff6b6b; }
+  .tx-fx--green { background: #5fd28a; }
+  .tx-fx--yellow { background: #f2d44a; }
+  .tx-fx--cyan { background: #3fe0e0; }
+
+  .tx-hint { text-align: center; margin-top: 16px; font-family: var(--font-mono); font-size: 12px; color: #5a6470; letter-spacing: .5px; }
+  .tx-hint kbd { color: #aab2bd; }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="pages.jsx"></script>
+  <script type="text/babel">
+    const { PAGES, useState, useEffect } = window;
+    const FX_COLORS = ['red', 'green', 'yellow', 'cyan'];
+    const FX_WORDS = { 100: 'index', 200: 'repos', 300: 'commits', 400: 'issues', 500: 'builds', 888: 'help', 210: 'kbpkg', 220: 'gitxt', 310: 'log' };
+
+    function Clock() {
+      const [t, setT] = useState('');
+      useEffect(() => {
+        const fmt = () => {
+          const d = new Date();
+          const day = d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' });
+          const tm = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          setT(day + '  ' + tm);
+        };
+        fmt(); const id = setInterval(fmt, 1000); return () => clearInterval(id);
+      }, []);
+      return <span className="clk">{t}</span>;
+    }
+
+    function App() {
+      const [page, setPage] = useState(100);
+      const [buf, setBuf] = useState('');
+      const [notFound, setNotFound] = useState(false);
+
+      const go = (n) => { if (PAGES[n]) { setPage(n); setBuf(''); setNotFound(false); } else { setNotFound(true); setTimeout(() => setNotFound(false), 1200); } };
+
+      useEffect(() => {
+        const onKey = (e) => {
+          if (/^[0-9]$/.test(e.key)) {
+            setBuf(prev => {
+              const next = (prev + e.key).slice(0, 3);
+              if (next.length === 3) { const n = parseInt(next, 10); setTimeout(() => go(n), 250); }
+              return next;
+            });
+          } else if (e.key === 'Backspace') { setBuf(prev => prev.slice(0, -1)); }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+      }, []);
+
+      const pageDisp = buf ? ('P' + (buf + '___').slice(0, 3)) : ('P' + page);
+      const fast = (PAGES[page].fast) || [100, 200, 300, 100];
+
+      return (
+        <div className="tx-stage">
+          <div className="tx-screen">
+            <div className="tx-statusbar">
+              <span className="pg">{pageDisp}</span>
+              <span className="svc">gitxt</span>
+              <Clock />
+            </div>
+            <div className="tx-body">
+              {notFound ? <div className="tx-row tx-notfound">page not found — try 100</div> : PAGES[page].render(go)}
+            </div>
+            <div className="tx-fastext">
+              {fast.map((n, i) => (
+                <div key={i} className={'tx-fx tx-fx--' + FX_COLORS[i]} onClick={() => go(n)}>
+                  <b>{n}</b><span>{FX_WORDS[n] || 'page'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="tx-hint">type a page number (e.g. <kbd>300</kbd>) or click a coloured button · <kbd>100</kbd> for index</div>
+        </div>
+      );
+    }
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

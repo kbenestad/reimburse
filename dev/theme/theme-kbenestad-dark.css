@@ -1,0 +1,464 @@
+/* ============================================================================
+   theme-kbenestad-dark.css
+   kBenestad — Forgejo theme (DARK)
+   Faithful inversion onto deep slate (#0d1117) with a lighter blue for contrast.
+
+   Install: drop this file in  custom/public/assets/css/
+   then in app.ini  [ui]
+     THEMES = forgejo-auto,forgejo-light,forgejo-dark,kbenestad-light,kbenestad-dark
+     DEFAULT_THEME = kbenestad-dark
+   ----------------------------------------------------------------------------
+   Strategy: a COMPLETE, self-contained variable set followed by the same
+   structural overrides as the light theme — Schibsted Grotesk type, accent-soft
+   topic pills, flat buttons, hairline cards.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "./theme-forgejo-dark.css";
+
+:root {
+  color-scheme: dark;
+  --is-dark-theme: true;
+
+  /* ── Type ──────────────────────────────────────────────────────────────────
+     Forgejo resolves body type as  var(--fonts-override, var(--fonts-proportional)),
+     "Noto Sans", …  — so these vars ARE the hook. Marked !important to win even
+     if the shipped base theme sets them !important first (per Forgejo's docs). */
+  --fonts-proportional: "Schibsted Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif !important;
+  --fonts-regular: "Schibsted Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif !important;
+  --fonts-monospace: "JetBrains Mono", ui-monospace, "SFMono-Regular", "Cascadia Code", Menlo, Consolas, monospace !important;
+
+  /* ── Corners ───────────────────────────────────────────────────────────── */
+  --border-radius: 6px;
+  --border-radius-medium: 8px;
+  --border-radius-full: 99999px;
+
+  /* ── Accent — Nordic blue, brightened toward light for dark ground ─────── */
+  --color-primary:           #2f6fed;
+  --color-primary-contrast:  #ffffff;
+  --color-primary-dark-1:    #4f82ec;
+  --color-primary-dark-2:    #6c98ef;
+  --color-primary-dark-3:    #88abf2;
+  --color-primary-dark-4:    #a6c1f5;
+  --color-primary-dark-5:    #c2d5f8;
+  --color-primary-dark-6:    #dbe7fb;
+  --color-primary-dark-7:    #eef3fe;
+  --color-primary-light-1:   #245ac8;
+  --color-primary-light-2:   #1f57cf;
+  --color-primary-light-3:   #1b46a3;
+  --color-primary-light-4:   #163b88;
+  --color-primary-light-5:   #142e63;
+  --color-primary-light-6:   #102450;
+  --color-primary-light-7:   #0c1c3e;
+  --color-primary-alpha-10:  rgba(86, 133, 233, 0.10);
+  --color-primary-alpha-20:  rgba(86, 133, 233, 0.20);
+  --color-primary-alpha-30:  rgba(86, 133, 233, 0.30);
+  --color-primary-alpha-40:  rgba(86, 133, 233, 0.40);
+  --color-primary-alpha-50:  rgba(86, 133, 233, 0.50);
+  --color-primary-alpha-60:  rgba(86, 133, 233, 0.60);
+  --color-primary-alpha-70:  rgba(86, 133, 233, 0.70);
+  --color-primary-alpha-80:  rgba(86, 133, 233, 0.80);
+  --color-primary-alpha-90:  rgba(86, 133, 233, 0.90);
+  --color-primary-hover:     #4f82ec;
+  --color-primary-active:    #6c98ef;
+
+  /* ── Secondary ─────────────────────────────────────────────────────────── */
+  --color-secondary:         #2d3641;
+  --color-secondary-dark-1:  #3d4856;
+  --color-secondary-dark-2:  #4a5666;
+  --color-secondary-dark-3:  #5f6975;
+  --color-secondary-dark-4:  #6f7986;
+  --color-secondary-dark-5:  #8b95a1;
+  --color-secondary-dark-6:  #9aa4af;
+  --color-secondary-dark-7:  #aab2bd;
+  --color-secondary-dark-8:  #c2cad3;
+  --color-secondary-dark-9:  #d3d9e0;
+  --color-secondary-dark-10: #e1e6eb;
+  --color-secondary-dark-11: #eef1f5;
+  --color-secondary-dark-12: #f5f7f9;
+  --color-secondary-dark-13: #ffffff;
+  --color-secondary-light-1: #262e38;
+  --color-secondary-light-2: #232a33;
+  --color-secondary-light-3: #1c232c;
+  --color-secondary-light-4: #161b22;
+  --color-secondary-alpha-10: rgba(123, 134, 148, 0.10);
+  --color-secondary-alpha-20: rgba(123, 134, 148, 0.20);
+  --color-secondary-alpha-30: rgba(123, 134, 148, 0.30);
+  --color-secondary-alpha-40: rgba(123, 134, 148, 0.40);
+  --color-secondary-alpha-50: rgba(123, 134, 148, 0.50);
+  --color-secondary-alpha-60: rgba(123, 134, 148, 0.60);
+  --color-secondary-alpha-70: rgba(123, 134, 148, 0.70);
+  --color-secondary-alpha-80: rgba(123, 134, 148, 0.80);
+  --color-secondary-alpha-90: rgba(123, 134, 148, 0.90);
+  --color-secondary-button:  #3d4856;
+  --color-secondary-hover:   #1c232c;
+  --color-secondary-active:  #232b35;
+
+  /* ── Text / ink ─────────────────────────────────────────────────────────── */
+  --color-text-dark:      #ffffff;
+  --color-text:           #eef1f5;
+  --color-text-light:     #c2cad3;
+  --color-text-light-1:   #8b95a1;
+  --color-text-light-2:   #6f7986;
+  --color-text-light-3:   #5f6975;
+  --color-placeholder-text: #5f6975;
+  --color-text-focus:     #ffffff;
+
+  /* ── Surfaces ──────────────────────────────────────────────────────────── */
+  --color-body:           #0d1117;   /* page ground (deep slate)  */
+  --color-box-body:       #161b22;   /* cards, file list, panels  */
+  --color-box-body-highlight: #1c232c;
+  --color-box-header:     #1c232c;   /* segment / table headers   */
+  --color-nav-bg:         #161b22;   /* top navbar                */
+  --color-nav-hover-bg:   #1c232c;
+  --color-secondary-nav-bg: #0d1117;
+  --color-footer:         #161b22;
+  --color-light:          rgba(139, 149, 161, 0.05);
+  --color-light-mimic-enabled: rgba(255, 255, 255, calc(8 / 255));
+  --color-light-border:   #232a33;
+  --color-hover:          #1c232c;   /* row / item hover          */
+  --color-active:         #232b35;   /* active row                */
+  --color-menu:           #161b22;
+  --color-card:           #161b22;
+  --fancy-card-bg:        #161b22;
+  --fancy-card-border:    #232a33;
+  --color-markup-tab-default: var(--color-box-header);
+  --color-markup-tab-active:  var(--color-box-body);
+  --color-header-wrapper: #161b22;
+  --color-header-wrapper-transparent: rgba(22, 27, 34, 0);
+
+  /* ── Inputs ────────────────────────────────────────────────────────────── */
+  --color-input-text:          #eef1f5;
+  --color-input-background:    #0f141a;
+  --color-input-toggle-background: #0f141a;
+  --color-input-border:        #2d3641;
+  --color-input-border-hover:  #3d4856;
+
+  /* ── Borders / dividers ────────────────────────────────────────────────── */
+  --color-border:        #232a33;
+  --color-secondary-bg:  #1c232c;
+
+  /* ── Code / markup ─────────────────────────────────────────────────────── */
+  --color-markup-code-block:  #0f141a;
+  --color-markup-code-inline: #1c232c;
+  --color-markup-table-row:   rgba(255, 255, 255, 0.024);
+  --color-code-bg:            #161b22;
+  --color-code-sidebar-bg:    #0f141a;
+
+  /* ── Shadows ───────────────────────────────────────────────────────────── */
+  --color-shadow:        rgba(0, 0, 0, 0.45);
+  --color-secondary-shadow: rgba(0, 0, 0, 0.30);
+
+  /* ── Accent line / selection / timeline / caret ────────────────────────── */
+  --color-accent:        #5685e9;
+  --color-small-accent:  #19243a;
+  --color-active-line:   #16233f;
+  --color-editor-line-highlight: #16233f;
+  --color-timeline:      #2d3641;
+  --color-caret:         #eef1f5;
+  --color-highlight-fg:  #88abf2;
+  --color-highlight-bg:  rgba(86, 133, 233, 0.16);
+  --color-selection-bg:  #16233f;
+  --color-selection-fg:  #eef1f5;
+  --color-overlay-backdrop: rgba(0, 0, 0, 0.55);
+
+  /* ── Semantic hues ─────────────────────────────────────────────────────── */
+  --color-red:     #e06464;
+  --color-orange:  #d99a3a;
+  --color-yellow:  #d99a3a;
+  --color-olive:   #a3a34a;
+  --color-green:   #3bb97a;
+  --color-teal:    #3aa6a6;
+  --color-blue:    #5685e9;
+  --color-violet:  #8579e0;
+  --color-purple:  #a06ce0;
+  --color-pink:    #e06ca6;
+  --color-brown:   #a3866b;
+  --color-grey:    #8b95a1;
+  --color-gold:    #d99a3a;
+  --color-white:   #ffffff;
+  --color-black:   #0d1117;
+  --color-pure-black: #000000;
+
+  /* light variants */
+  --color-red-light:    #e88585;
+  --color-green-light:  #5fd28a;
+  --color-blue-light:   #7ba2f0;
+  --color-grey-light:   #aab2bd;
+
+  /* dark-1 variants */
+  --color-red-dark-1:    #c95252;
+  --color-green-dark-1:  #2fa069;
+  --color-blue-dark-1:   #4f82ec;
+
+  /* Status text / background / border */
+  --color-success-text:   #5fd28a;
+  --color-success-bg:     #13301f;
+  --color-success-border: #1f4d33;
+  --color-error-text:     #f08a8a;
+  --color-error-bg:       #341819;
+  --color-error-bg-active:#4a2222;
+  --color-error-bg-hover: #3d1e1f;
+  --color-error-border:   #5a2a2a;
+  --color-warning-text:   #e7b35a;
+  --color-warning-bg:     #33270f;
+  --color-warning-border: #574017;
+  --color-info-text:      #88abf2;
+  --color-info-bg:        #16233f;
+  --color-info-border:    #21386a;
+  --color-danger-bg:      #2a1718;
+
+  /* Diff */
+  --color-diff-removed-word-bg: #5a2a2a;
+  --color-diff-added-word-bg:   #1f4d33;
+  --color-diff-removed-row-bg:  #2a1718;
+  --color-diff-added-row-bg:    #122a1d;
+  --color-diff-removed-row-border: #3d2122;
+  --color-diff-added-row-border:   #1b3a28;
+  --color-diff-moved-row-bg:    #33270f;
+  --color-diff-moved-row-border:#574017;
+  --color-diff-inactive:        #1c232c;
+
+  /* Labels / reactions / tooltip / nav */
+  --color-label-text:        #c2cad3;
+  --color-label-bg:          #2d3641;
+  --color-label-hover-bg:    #3d4856;
+  --color-label-active-bg:   #4a5666;
+  --color-reaction-bg:       #1c232c;
+  --color-reaction-hover-bg: rgba(86, 133, 233, 0.22);
+  --color-reaction-active-bg: rgba(86, 133, 233, 0.32);
+  --color-tooltip-text:      #14181e;
+  --color-tooltip-bg:        #eef1f5;
+  --color-button:            #3d4856;
+  --color-expand-button:     #2d3641;
+
+  /* badges */
+  --color-red-badge:    #e06464;
+  --color-red-badge-bg: rgba(224, 100, 100, 0.16);
+  --color-red-badge-bg-hover: rgba(224, 100, 100, 0.30);
+  --color-green-badge:  #3bb97a;
+  --color-green-badge-bg: rgba(59, 185, 122, 0.16);
+  --color-green-badge-bg-hover: rgba(59, 185, 122, 0.30);
+  --color-yellow-badge: #d99a3a;
+  --color-yellow-badge-bg: rgba(217, 154, 58, 0.16);
+  --color-yellow-badge-bg-hover: rgba(217, 154, 58, 0.30);
+  --color-orange-badge: #d99a3a;
+  --color-orange-badge-bg: rgba(217, 154, 58, 0.16);
+  --color-orange-badge-bg-hover: rgba(217, 154, 58, 0.30);
+
+  /* status indicators */
+  --color-indicator-offline: #5f6975;
+  --color-indicator-idle:    #d99a3a;
+  --color-indicator-active:  #3bb97a;
+
+  /* checkerboard (image diff) */
+  --checkerboard-color-1: #161b22;
+  --checkerboard-color-2: #0f141a;
+
+  /* project board */
+  --color-project-board-bg: #0d1117;
+
+  /* console */
+  --color-console-fg:        #e6e9ef;
+  --color-console-fg-subtle: #8b95a1;
+  --color-console-bg:        #0b0f14;
+  --color-console-border:    #1c232c;
+  --color-console-hover-bg:  rgba(255, 255, 255, 0.06);
+  --color-console-active-bg: rgba(255, 255, 255, 0.10);
+  --color-console-menu-bg:   #161b22;
+  --color-console-menu-border:#2d3641;
+
+  accent-color: var(--color-accent);
+}
+
+/* ===========================================================================
+   STRUCTURAL OVERRIDES — identical identity layer to the light theme.
+   ========================================================================== */
+
+/* ── Type ───────────────────────────────────────────────────────────────── */
+body,
+input, button, select, textarea, optgroup,
+.ui, .ui.menu, .ui.header, .ui.form, .ui.dropdown,
+.ui.dropdown .menu > .item, .ui.input > input,
+.markup, h1, h2, h3, h4, h5, h6,
+.repo-header, .repository .header-wrapper, .commit-summary, .file-info {
+  font-family: var(--fonts-proportional) !important;
+}
+code, pre, tt, kbd, samp, .mono,
+.ui.input.mono, .commit-id, .sha, .ui.label.commit-id,
+.code-view, .lines-code, .lines-num, .CodeMirror,
+.markup code, .markup pre, .markup tt {
+  font-family: var(--fonts-monospace) !important;
+}
+body {
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Primary / positive buttons ─────────────────────────────────────────── */
+.ui.primary.button,
+.ui.primary.buttons .button,
+.ui.positive.button,
+.ui.positive.buttons .button {
+  background: var(--color-primary) !important;
+  color: #fff !important;
+  border-color: var(--color-primary) !important;
+  font-weight: 600;
+  box-shadow: none !important;
+}
+.ui.primary.button:hover,
+.ui.primary.buttons .button:hover,
+.ui.positive.button:hover,
+.ui.positive.buttons .button:hover {
+  background: var(--color-primary-hover) !important;
+  border-color: var(--color-primary-hover) !important;
+}
+
+/* ── Default / secondary buttons ────────────────────────────────────────── */
+.ui.button {
+  font-weight: 500;
+  box-shadow: none;
+}
+.ui.basic.button,
+.ui.basic.buttons .button {
+  box-shadow: inset 0 0 0 1px var(--color-border) !important;
+}
+
+/* ── Repo tabs — accent active label + accent underline ─────────────────────
+   The repo tab bar is Forgejo's `.ui.secondary.pointing.menu`; the active item's
+   colour is set by the full active/hover/focus/dropdown selector group, so we
+   match it verbatim to actually win the cascade. */
+.ui.secondary.pointing.menu .active.item,
+.ui.secondary.pointing.menu .active.item:hover,
+.ui.secondary.pointing.menu .active.item:focus,
+.ui.secondary.pointing.menu .dropdown.item:hover,
+.ui.secondary.pointing.menu .dropdown.item:focus,
+.ui.tabular.menu .active.item {
+  color: var(--color-accent) !important;
+  border-color: var(--color-primary) !important;
+  font-weight: 600;
+}
+.ui.secondary.pointing.menu .item:hover {
+  color: var(--color-text) !important;
+}
+/* Tab count pills (12 · 3 · 4) render as plain `.ui.label` inside each item →
+   accent-tinted instead of flat grey. */
+.ui.secondary.pointing.menu .item .ui.label,
+.ui.tabular.menu .item .ui.label {
+  background: var(--color-primary-alpha-10) !important;
+  color: var(--color-accent) !important;
+  border: 1px solid var(--color-primary-alpha-20) !important;
+}
+.ui.secondary.pointing.menu .active.item .ui.label,
+.ui.tabular.menu .active.item .ui.label {
+  background: var(--color-primary) !important;
+  color: #fff !important;
+  border-color: var(--color-primary) !important;
+}
+
+/* ── Repo header title — owner / name carry the accent (branded chrome) ── */
+.repo-header .flex-text-block a,
+.repo-header .repo-title a,
+.repository .header-wrapper .repo-title a {
+  color: var(--color-accent) !important;
+}
+.repo-header .flex-text-block a:hover { text-decoration: underline; }
+/* Watch / Star / Fork stay button-coloured — never accent text */
+.repo-header .repo-buttons a,
+.repo-header .repo-buttons .ui.button {
+  color: var(--color-text) !important;
+}
+
+/* ── Repo topics → real accent pills (clearly blue, never grey) ─────────────
+   Forgejo's topic markup has shifted across versions (#repo-topics > a,
+   a.repo-topic, a.topic.label …) — match them all so the chips are always
+   branded, with a visible blue fill + ring instead of the pale wash. */
+#repo-topics a,
+#repo-topics .ui.label,
+a.repo-topic,
+a.repo-topic.ui.label,
+.repository-topics a.ui.label,
+.topic.ui.label,
+a.topic.label {
+  background: var(--color-primary-alpha-10) !important;
+  color: var(--color-accent) !important;
+  border: 1px solid var(--color-primary-alpha-30) !important;
+  border-radius: var(--border-radius-full) !important;
+  font-weight: 600 !important;
+}
+#repo-topics a:hover,
+a.repo-topic:hover,
+.topic.ui.label:hover {
+  background: var(--color-primary) !important;
+  color: #fff !important;
+  border-color: var(--color-primary) !important;
+}
+
+/* ── Extra interactive coverage — the bits that quietly stay grey ──────────
+   Dropdowns, pagination, form focus, toggles and progress bars across the rest
+   of the app, pulled onto the accent so the brand reads everywhere, not just on
+   the repo home. Trim any rule you don't want. */
+
+/* Dropdown / select menus — selected + active item in accent */
+.ui.dropdown .menu > .item.selected,
+.ui.dropdown .menu > .item.active,
+.ui.selection.dropdown .menu > .item.active.selected {
+  color: var(--color-accent) !important;
+  background: var(--color-primary-alpha-10) !important;
+}
+
+/* Pagination — current page in solid accent */
+.ui.pagination.menu .active.item {
+  background: var(--color-primary) !important;
+  color: #fff !important;
+}
+
+/* Form fields — accent focus ring instead of the default grey/teal */
+.ui.input input:focus,
+.ui.form input:focus,
+.ui.form textarea:focus,
+.ui.selection.active.dropdown,
+.ui.selection.dropdown:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 2px var(--color-primary-alpha-20) !important;
+}
+
+/* Checkboxes, radios, toggles — checked state in accent */
+.ui.checkbox input:checked ~ .box::before,
+.ui.checkbox input:checked ~ label::before,
+.ui.radio.checkbox input:checked ~ .box::before,
+.ui.radio.checkbox input:checked ~ label::before,
+.ui.toggle.checkbox input:checked ~ .box::before,
+.ui.toggle.checkbox input:checked ~ label::before {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+}
+
+/* Progress bars (upload, migration, theme-driven stats) */
+.ui.progress .bar {
+  background: var(--color-primary) !important;
+}
+
+/* ── Cards / segments ───────────────────────────────────────────────────── */
+.ui.segment,
+.ui.segments,
+.ui.attached.segment,
+.repository-summary,
+.repo-description-box,
+.ui.card,
+.ui.cards > .card {
+  box-shadow: 0 1px 0 var(--color-shadow);
+}
+.ui.segments,
+.ui.card,
+.ui.cards > .card {
+  border-radius: var(--border-radius-medium);
+}
+
+/* ── Links ──────────────────────────────────────────────────────────────── */
+a { text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Octicons ───────────────────────────────────────────────────────────── */
+.svg, .gt-octicon, .octicon { fill: currentColor; }

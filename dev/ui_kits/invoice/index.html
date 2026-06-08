@@ -1,0 +1,106 @@
+<!-- @dsCard group="invoice" viewport="1280x820" name="invoice app" subtitle="Internal-tools family — invoice list & detail (shared shell for timesheet, reimburse, capcms, mdcms)" -->
+<!-- @startingPoint section="Internal tools" subtitle="Sidebar app shell with list + record detail" viewport="1280x820" -->
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>invoice — kBenestad</title>
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  html, body { height: 100%; }
+  body { background: var(--surface-page); }
+  .iv-app { display: grid; grid-template-columns: 248px 1fr; height: 100vh; }
+
+  /* Sidebar */
+  .iv-side { background: var(--surface-card); border-right: var(--border-thin) solid var(--border-subtle);
+    display: flex; flex-direction: column; padding: 20px 16px; }
+  .iv-brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 17px; letter-spacing: -0.02em;
+    color: var(--text-strong); padding: 0 6px; }
+  .iv-appname { font-family: var(--font-mono); font-size: var(--text-body-sm); color: var(--text-muted);
+    padding: 2px 6px 0 41px; margin-bottom: 26px; }
+  .iv-nav { display: flex; flex-direction: column; gap: 2px; }
+  .iv-navitem { display: flex; align-items: center; gap: 11px; padding: 9px 11px; border-radius: var(--radius-md);
+    color: var(--text-body); font-weight: var(--weight-medium); cursor: pointer; font-size: var(--text-body); }
+  .iv-navitem:hover { background: var(--surface-hover); text-decoration: none; }
+  .iv-navitem.is-active { background: var(--accent-soft); color: var(--accent-soft-text); }
+  .iv-switch { margin-top: auto; }
+  .iv-switch__label { font-size: var(--text-caption); letter-spacing: var(--tracking-caps); text-transform: uppercase;
+    color: var(--text-subtle); font-weight: 600; padding: 0 6px 10px; }
+  .iv-switch__tiles { display: flex; gap: 8px; padding: 0 4px; }
+  .iv-tile { width: 38px; height: 38px; border-radius: var(--radius-md); display: grid; place-items: center;
+    font-family: var(--font-mono); font-size: 12px; font-weight: 600; background: var(--surface-sunken);
+    color: var(--text-muted); border: var(--border-thin) solid var(--border-subtle); cursor: pointer; }
+  .iv-tile.is-on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* Main */
+  .iv-main { overflow-y: auto; }
+  .iv-content { max-width: 920px; margin: 0 auto; padding: 32px 36px 60px; }
+  .iv-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 26px; }
+  .iv-topbar h1 { font-size: var(--text-h1); font-weight: var(--weight-bold); }
+  .iv-back { display: inline-flex; align-items: center; gap: 6px; background: none; border: none; cursor: pointer;
+    font-family: var(--font-sans); font-size: var(--text-body); font-weight: var(--weight-medium); color: var(--text-muted); padding: 0; }
+  .iv-back:hover { color: var(--text-strong); }
+
+  /* Stats */
+  .iv-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 22px; }
+  .iv-stat { background: var(--surface-card); border: var(--border-thin) solid var(--border-subtle); border-radius: var(--radius-lg);
+    padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; }
+  .iv-stat__k { font-size: var(--text-body-sm); color: var(--text-muted); }
+  .iv-stat__v { font-size: var(--text-h3); font-weight: var(--weight-bold); color: var(--text-strong); font-variant-numeric: tabular-nums; }
+
+  /* Search */
+  .iv-search { display: flex; align-items: center; gap: 10px; padding: 0 14px; height: 42px; margin-bottom: 18px;
+    background: var(--surface-card); border: var(--border-thin) solid var(--border-default); border-radius: var(--radius-md); }
+  .iv-search:focus-within { border-color: var(--border-focus); box-shadow: var(--focus-ring); }
+  .iv-search input { flex: 1; border: none; outline: none; background: none; font-family: var(--font-sans); font-size: var(--text-body); color: var(--text-strong); }
+
+  /* Table */
+  .iv-table { width: 100%; border-collapse: collapse; }
+  .iv-table th { text-align: left; font-size: var(--text-caption); letter-spacing: var(--tracking-caps); text-transform: uppercase;
+    color: var(--text-muted); font-weight: 600; padding: 12px 16px; border-bottom: var(--border-thin) solid var(--border-subtle); }
+  .iv-table td { padding: 14px 16px; border-bottom: var(--border-thin) solid var(--border-subtle); font-size: var(--text-body); color: var(--text-body); }
+  .iv-table tbody tr { cursor: pointer; }
+  .iv-table tbody tr:hover { background: var(--surface-hover); }
+  .iv-table tbody tr:last-child td { border-bottom: none; }
+  .iv-table .num { text-align: right; }
+  .iv-table .mono { font-family: var(--font-mono); color: var(--text-strong); }
+  .iv-table .muted { color: var(--text-muted); }
+  .iv-table .chev { color: var(--text-subtle); width: 24px; }
+
+  /* Invoice sheet */
+  .iv-sheet { padding: 36px 40px; }
+  .iv-sheet__head { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 26px; border-bottom: var(--border-thin) solid var(--border-subtle); }
+  .iv-sheet__no { font-family: var(--font-mono); font-size: var(--text-h2); font-weight: var(--weight-bold); color: var(--text-strong); margin-bottom: 10px; }
+  .iv-sheet__from { display: flex; flex-direction: column; gap: 2px; text-align: right; font-size: var(--text-body-sm); color: var(--text-body); }
+  .iv-sheet__from strong { color: var(--text-strong); font-size: var(--text-body); }
+  .iv-sheet__parties { display: flex; justify-content: space-between; padding: 24px 0; }
+  .iv-party { font-size: var(--text-body-lg); font-weight: var(--weight-semibold); color: var(--text-strong); margin-top: 6px; }
+  .iv-dates { display: flex; gap: 40px; text-align: right; }
+  .iv-dates > div > div { color: var(--text-strong); font-weight: var(--weight-medium); margin-top: 6px; }
+  .muted { color: var(--text-muted); }
+
+  .iv-lines { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  .iv-lines th { text-align: left; font-size: var(--text-caption); letter-spacing: var(--tracking-caps); text-transform: uppercase;
+    color: var(--text-muted); font-weight: 600; padding: 10px 0; border-bottom: var(--border-medium) solid var(--border-default); }
+  .iv-lines td { padding: 13px 0; border-bottom: var(--border-thin) solid var(--border-subtle); font-size: var(--text-body); color: var(--text-body); }
+  .iv-lines .num { text-align: right; }
+  .iv-lines .mono { font-family: var(--font-mono); }
+  .iv-totals { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; margin-left: auto; width: 260px; }
+  .iv-totrow { display: flex; justify-content: space-between; font-size: var(--text-body); color: var(--text-body); }
+  .iv-totrow--grand { border-top: var(--border-medium) solid var(--border-default); padding-top: 12px; margin-top: 4px;
+    font-size: var(--text-h4); font-weight: var(--weight-bold); color: var(--text-strong); }
+
+  @media (max-width: 760px) { .iv-app { grid-template-columns: 1fr; } .iv-side { display: none; } }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="data.js"></script>
+  <script type="text/babel" src="ui.jsx"></script>
+  <script type="text/babel" src="app.jsx"></script>
+</body>
+</html>

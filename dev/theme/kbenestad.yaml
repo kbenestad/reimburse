@@ -1,0 +1,101 @@
+# mdcms v0.4 | DO NOT REMOVE THIS COMMENT
+# mdcms theme — kBenestad
+# Nordic-minimal: cool paper ground, near-black slate ink, one calm blue accent.
+# Mirrors the kBenestad design language (Schibsted Grotesk + a single #2F6FED blue).
+#
+# Install:
+#   1. Copy this file into your project root (next to config.yml).
+#   2. In config.yml set:  theme: kbenestad.yaml
+#      (or rename this file to theme.yml to replace the default)
+
+# ──────────────────────────────────
+# Colours
+# ──────────────────────────────────
+light:
+  accent: "#2F6FED"
+  background: "#FFFFFF"
+  nav-background: "#F8F9FB"
+  text: "#14181E"
+  text-muted: "#6B7785"
+  nav-link: "#3A434F"            # inactive nav link text
+  nav-link-active: "#2F6FED"     # active nav link text
+  nav-section-heading: "#6B7785" # nav section label text
+  nav-sitename: "#14181E"        # site name in sidebar header
+  nav-description: "#6B7785"      # site description in sidebar header
+  nav-toggle: "#6B7785"          # dark/light mode toggle
+  divider: "#E7EAEF"             # border/hr colour
+
+dark:
+  accent: "#5685E9"
+  background: "#0D1117"
+  nav-background: "#161B22"
+  text: "#EEF1F5"
+  text-muted: "#8B95A1"
+  nav-link: "#C2CAD3"            # inactive nav link text
+  nav-link-active: "#5685E9"     # active nav link text
+  nav-section-heading: "#8B95A1" # nav section label text
+  nav-sitename: "#EEF1F5"        # site name in sidebar header
+  nav-description: "#8B95A1"      # site description in sidebar header
+  nav-toggle: "#8B95A1"          # dark/light mode toggle
+  divider: "#232A33"             # border/hr colour
+
+# ──────────────────────────────────
+# Semantic colours
+# Used by callout tags (info, warning, success, error).
+# colours-semantic applies to both modes; colours-semantic-dark overrides for dark mode.
+# ──────────────────────────────────
+colours-semantic:
+  info: "#2F6FED"
+  warning: "#C9851F"
+  success: "#1F9D5F"
+  error: "#D64545"
+
+colours-semantic-dark:
+  info: "#88ABF2"
+  warning: "#D99A3A"
+  success: "#3BB97A"
+  error: "#E06464"
+
+# ──────────────────────────────────
+# Callout defaults
+# primary-colour matches colours-semantic (light mode).
+# ──────────────────────────────────
+callouts:
+  info:
+    icon: info
+    primary-colour: "#2F6FED"
+    background-colour: "#2F6FED"
+  warning:
+    icon: warning
+    primary-colour: "#C9851F"
+    background-colour: "#C9851F"
+  success:
+    icon: success
+    primary-colour: "#1F9D5F"
+    background-colour: "#1F9D5F"
+  error:
+    icon: error
+    primary-colour: "#D64545"
+    background-colour: "#D64545"
+
+# ──────────────────────────────────
+# Typography
+# Format: "provider:Font Name:weight"  (provider: bunny | google)
+# Schibsted Grotesk is the kBenestad type voice — clean Nordic grotesque.
+# ──────────────────────────────────
+font-body: "bunny:Schibsted Grotesk:400"
+font-heading: "bunny:Schibsted Grotesk:700"
+font-size: 1.00        # unitless multiplier (1.0 = 16px base)
+line-height: 1.70      # unitless multiplier
+
+# ──────────────────────────────────
+# Nav section toggle icons
+# ──────────────────────────────────
+nav-section-expand-icon: keyboard_arrow_right
+nav-section-collapse-icon: keyboard_arrow_down
+
+# ──────────────────────────────────
+# Layout
+# ──────────────────────────────────
+main-width: 80em
+nav-width: 20em

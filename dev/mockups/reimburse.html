@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="format-detection" content="telephone=no">
+<title>Reimbursement — kBenestad reskin</title>
+<link rel="stylesheet" href="kbenestad-forms.css">
+<script>
+  (function(){var p=new URLSearchParams(location.search).get('theme');
+   if(p)document.documentElement.setAttribute('data-theme',p);})();
+</script>
+
+<!-- React + Babel for the Tweaks panel (mockup-only; not part of the shipped app) -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<style>
+  .rb-line-head, .rb-line { grid-template-columns: 1fr 96px 120px 120px 30px; }
+  .rb-receipt {
+    display:flex; align-items:center; gap:9px; padding:8px 12px; margin-top:8px;
+    background:var(--accent-soft); border:1px solid var(--accent-border);
+    border-radius:var(--radius-sm); font-size:var(--fs-small); color:var(--text-soft);
+  }
+  .rb-receipt svg{ width:16px;height:16px;color:var(--accent);flex:0 0 16px; }
+  .rb-receipt .name{ flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+  .rb-receipt .sz{ color:var(--text-muted);font-family:var(--font-mono); }
+
+  /* FX conversion sub-panel — opens beneath a line when the line's currency
+     differs from the claim currency. Mirrors the original app's behaviour:
+     a calculation widget revealed on foreign-currency selection. */
+  .rb-fx {
+    margin-top: 10px; padding: 12px 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius-sm);
+  }
+  .rb-fx__head {
+    display:flex; align-items:center; gap:8px;
+    font-size: var(--fs-small); font-weight: 600;
+    text-transform: uppercase; letter-spacing: .04em;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+  .rb-fx__head svg { width:14px; height:14px; color: var(--accent); flex: 0 0 14px; }
+  .rb-fx__body {
+    display:flex; align-items:center; gap: 18px; flex-wrap: wrap;
+    font-size: var(--fs-base);
+  }
+  .rb-fx__rate {
+    display:flex; align-items:center; gap:8px;
+    padding: 4px 8px 4px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+  }
+  .rb-fx__rate .lab { color: var(--text-muted); font-size: var(--fs-small); white-space: nowrap; }
+  .rb-fx__rate input {
+    width: 96px; padding: 4px 8px;
+    border: 1px solid var(--border); border-radius: 4px;
+    background: var(--surface); color: var(--text);
+    font-family: var(--font-mono); text-align: right;
+    font-size: var(--fs-input);
+  }
+  .rb-fx__rate input:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
+  .rb-fx__calc {
+    display:flex; align-items:center; gap:10px; flex-wrap: wrap;
+    color: var(--text-muted); font-size: var(--fs-small);
+  }
+  .rb-fx__calc .kb-mono { color: var(--text-soft); }
+  .rb-fx__calc .op { color: var(--text-muted); font-family: var(--font-mono); }
+  .rb-fx__calc .total {
+    color: var(--accent); font-weight: 700;
+    padding-left: 10px; margin-left: 2px;
+    border-left: 1px solid var(--border);
+  }
+  @media (max-width:680px){
+    .rb-line-head{display:none;}
+    .rb-line{grid-template-columns:1fr 1fr;gap:8px;}
+  }
+</style>
+</head>
+<body class="kb">
+<div class="kb-wrap">
+
+  <div class="kb-toolbar">
+    <div class="spacer"></div>
+    <div class="kb-seg" role="group" aria-label="Text size">
+      <button>A−</button><button class="is-active">A</button><button>A+</button>
+    </div>
+    <button class="kb-iconbtn" aria-label="About">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zm.9 11.2H7.1v1.5h1.8v-1.5zm0-8.4H7.1v6.2h1.8V2.8z"/></svg>
+    </button>
+  </div>
+
+  <header class="kb-header">
+    <div class="kb-brand">
+      <span class="logo">CA</span>
+      <span class="org">Center for Asylum Protection<small>Expense reimbursement</small></span>
+    </div>
+    <div class="kb-doctitle">
+      <h1>Reimbursement</h1>
+      <div class="meta">Claim · 6 June 2026</div>
+    </div>
+  </header>
+
+  <!-- claimant -->
+  <section class="kb-card">
+    <h2 class="kb-card__title">Claimant</h2>
+    <div class="kb-grid cols-3" style="gap:14px 16px;">
+      <div class="kb-field"><span class="kb-label">Name</span><input class="kb-input" value="Mai Nguyen"></div>
+      <div class="kb-field"><span class="kb-label">Program</span>
+        <select class="kb-select"><option>Legal Aid Program</option><option>Protection Program</option><option>General Operations</option><option>Other…</option></select>
+      </div>
+      <div class="kb-field"><span class="kb-label">Account code</span>
+        <select class="kb-select"><option>2000 — Travel &amp; Transport</option><option>3000 — Office Supplies</option><option>4000 — Professional Services</option></select>
+      </div>
+      <div class="kb-field"><span class="kb-label">Claim currency</span>
+        <select class="kb-select"><option>USD — US dollar</option><option>THB — Thai baht</option><option>EUR — Euro</option></select>
+      </div>
+      <div class="kb-field grow" style="grid-column:span 2;"><span class="kb-label">Purpose</span><input class="kb-input" value="Field visit — refugee status interviews, Mae Sot"></div>
+    </div>
+  </section>
+
+  <!-- expense item 1 -->
+  <section class="kb-card">
+    <h2 class="kb-card__title">Expenses <span class="count">2 items</span></h2>
+
+    <div class="kb-block">
+      <div class="kb-block__head">
+        <span class="tag">Item 1 · Transport</span>
+        <span class="kb-subtotal">USD 184.00</span>
+      </div>
+      <div class="kb-rowhead kb-row rb-line-head">
+        <span>Description</span><span class="r">Amount</span><span>Currency</span><span class="r">In USD</span><span></span>
+      </div>
+      <div class="kb-row rb-line">
+        <input class="kb-input" value="Return flight BKK–Mae Sot">
+        <input class="kb-input num" value="6,440.00">
+        <select class="kb-select"><option>THB</option><option>USD</option></select>
+        <span class="r kb-mono">184.00</span>
+        <button class="kb-circbtn kb-circbtn--rm">−</button>
+      </div>
+      <div class="rb-receipt">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 1.5A1.5 1.5 0 0 1 4.5 0h4.7c.4 0 .8.16 1.06.44l2.3 2.3c.28.27.44.66.44 1.06v8.7A1.5 1.5 0 0 1 11.5 16h-7A1.5 1.5 0 0 1 3 14.5zM9 1.5V4h2.5z"/></svg>
+        <span class="name">receipt-flight-bkk.pdf</span><span class="sz">240 KB</span>
+      </div>
+
+      <!-- FX panel: opens beneath the line because its currency (THB) ≠ claim currency (USD) -->
+      <div class="rb-fx" role="group" aria-label="FX conversion">
+        <div class="rb-fx__head">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 4a1 1 0 0 1 1-1h8.6L10.3 1.7a1 1 0 0 1 1.4-1.4l3 3a1 1 0 0 1 0 1.4l-3 3a1 1 0 0 1-1.4-1.4L11.6 5H3a1 1 0 0 1-1-1zm12 8a1 1 0 0 1-1 1H4.4l1.3 1.3a1 1 0 0 1-1.4 1.4l-3-3a1 1 0 0 1 0-1.4l3-3a1 1 0 0 1 1.4 1.4L4.4 11H13a1 1 0 0 1 1 1z"/></svg>
+          <span>Foreign currency — enter exchange rate</span>
+        </div>
+        <div class="rb-fx__body">
+          <label class="rb-fx__rate">
+            <span class="lab">1 USD =</span>
+            <input value="35.00000" aria-label="THB per 1 USD">
+            <span class="lab">THB</span>
+          </label>
+          <div class="rb-fx__calc">
+            <span class="kb-mono">6,440.00 THB</span>
+            <span class="op">÷</span>
+            <span class="kb-mono">35.00</span>
+            <span class="op">=</span>
+            <span class="kb-mono total">USD 184.00</span>
+          </div>
+        </div>
+      </div>
+      <!-- /FX panel -->
+    </div>
+
+    <!-- expense item 2 -->
+    <div class="kb-block">
+      <div class="kb-block__head">
+        <span class="tag">Item 2 · Accommodation</span>
+        <span class="kb-subtotal">USD 96.00</span>
+      </div>
+      <div class="kb-rowhead kb-row rb-line-head">
+        <span>Description</span><span class="r">Amount</span><span>Currency</span><span class="r">In USD</span><span></span>
+      </div>
+      <div class="kb-row rb-line">
+        <input class="kb-input" value="Guesthouse — 2 nights">
+        <input class="kb-input num" value="96.00">
+        <select class="kb-select"><option>USD</option><option>THB</option></select>
+        <span class="r kb-mono">96.00</span>
+        <button class="kb-circbtn kb-circbtn--rm">−</button>
+      </div>
+      <div class="rb-receipt">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 1.5A1.5 1.5 0 0 1 4.5 0h4.7c.4 0 .8.16 1.06.44l2.3 2.3c.28.27.44.66.44 1.06v8.7A1.5 1.5 0 0 1 11.5 16h-7A1.5 1.5 0 0 1 3 14.5zM9 1.5V4h2.5z"/></svg>
+        <span class="name">guesthouse-invoice.jpg</span><span class="sz">1.1 MB</span>
+      </div>
+    </div>
+
+    <button class="kb-btn kb-btn--dashed">+ Add expense item</button>
+  </section>
+
+  <!-- totals + declaration -->
+  <div class="kb-grid cols-2">
+    <section class="kb-card" style="margin:0;">
+      <h2 class="kb-card__title">Declaration</h2>
+      <div class="kb-note kb-note--info">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zm.9 6.8H7.1v5.4h1.8V6.8zM8 3.3a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2z"/></svg>
+        <span>I certify that the above expenses were incurred on official business and are supported by the attached receipts.</span>
+      </div>
+      <div class="kb-field"><span class="kb-label">Claimant signature</span><div class="kb-sig"></div></div>
+    </section>
+
+    <section class="kb-card kb-card--flex" style="margin:0;">
+      <h2 class="kb-card__title">Summary</h2>
+      <div class="kb-totals kb-totals--fill">
+        <div class="row"><span class="lab">Transport</span><span class="val">184.00</span></div>
+        <div class="row"><span class="lab">Accommodation</span><span class="val">96.00</span></div>
+        <div class="grand"><span class="lab">Total claim (USD)</span><span class="val">280.00</span></div>
+      </div>
+    </section>
+  </div>
+
+  <button class="kb-btn kb-btn--primary kb-btn--lg kb-btn--block" style="margin-top:8px;">
+    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a1 1 0 0 1 1 1v6.6l2.3-2.3a1 1 0 0 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 1.4-1.4L7 8.6V2a1 1 0 0 1 1-1zM3 13h10a1 1 0 1 1 0 2H3a1 1 0 1 1 0-2z"/></svg>
+    Generate Reimbursement PDF
+  </button>
+</div>
+
+<!-- Tweaks panel mount (hidden until the host toggles Tweaks on) -->
+<div id="tweak-root"></div>
+<script type="text/babel">
+  const { useTweaks, TweaksPanel, TweakSection, TweakSlider, TweakRadio, TweakColor } = window;
+
+  // Defaults reflect the shipping baseline. Each accent palette is
+  // [--accent, --accent-hover, --accent-soft, --accent-border] so the
+  // panel can recolour the whole form by writing 4 vars in one shot.
+  const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+    "theme": "auto",
+    "accent": [
+      "#2F6FED",
+      "#1F57CF",
+      "#EEF3FE",
+      "#C7D9FB"
+    ],
+    "fontScale": 1,
+    "radius": "sharp"
+  }/*EDITMODE-END*/;
+
+  const ACCENT_PALETTES = [
+    ["#2F6FED","#1F57CF","#EEF3FE","#C7D9FB"], // kBenestad blue
+    ["#1F8A5B","#136B45","#E2F3EA","#A7D7BA"], // forest (health / charity)
+    ["#B33A3A","#8E2C2C","#FBEAEA","#EBBCBC"], // crimson (legal)
+    ["#6B4FBB","#523795","#EEEAFB","#C6BCEF"]  // plum (consulting)
+  ];
+
+  const RADIUS_PRESETS = {
+    sharp:    { r: "2px", rs: "2px" },
+    "default":{ r: "8px", rs: "6px" },
+    rounded:  { r: "14px", rs: "10px" }
+  };
+
+  function applyTweaks(t) {
+    const root = document.documentElement;
+    // Theme: 'auto' clears the attr so the CSS @media (prefers-color-scheme) wins.
+    if (t.theme === "auto") root.removeAttribute("data-theme");
+    else root.setAttribute("data-theme", t.theme);
+    // Accent palette
+    const [a, h, s, b] = t.accent;
+    root.style.setProperty("--accent", a);
+    root.style.setProperty("--accent-hover", h);
+    root.style.setProperty("--accent-soft", s);
+    root.style.setProperty("--accent-border", b);
+    // Font scale (addresses the "text feels small" feedback)
+    root.style.setProperty("--font-scale", String(t.fontScale));
+    // Corner radius
+    const rp = RADIUS_PRESETS[t.radius] || RADIUS_PRESETS["default"];
+    root.style.setProperty("--radius", rp.r);
+    root.style.setProperty("--radius-sm", rp.rs);
+  }
+
+  function ReimburseTweaks() {
+    const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+    React.useEffect(() => { applyTweaks(t); }, [t]);
+    return (
+      <TweaksPanel title="Reimburse">
+        <TweakSection label="Theme" />
+        <TweakRadio
+          label="Mode" value={t.theme}
+          options={["auto","light","dark"]}
+          onChange={(v) => setTweak("theme", v)} />
+        <TweakColor
+          label="Accent palette" value={t.accent}
+          options={ACCENT_PALETTES}
+          onChange={(v) => setTweak("accent", v)} />
+
+        <TweakSection label="Density &amp; rhythm" />
+        <TweakSlider
+          label="Text scale" value={t.fontScale}
+          min={0.95} max={1.30} step={0.05} unit="×"
+          onChange={(v) => setTweak("fontScale", v)} />
+        <TweakRadio
+          label="Corner radius" value={t.radius}
+          options={["sharp","default","rounded"]}
+          onChange={(v) => setTweak("radius", v)} />
+      </TweaksPanel>
+    );
+  }
+
+  // Wait for tweaks-panel.jsx + the rest to finish loading, then mount.
+  function mount() {
+    if (!window.TweaksPanel) return requestAnimationFrame(mount);
+    ReactDOM.createRoot(document.getElementById("tweak-root"))
+      .render(<ReimburseTweaks />);
+  }
+  mount();
+</script>
+
+<footer class="kb-footer">
+  <span class="kb-mark"><span class="glyph"><i></i><i></i></span>kBenestad</span>
+  <span class="sep">·</span>
+  <span>© 2026 Kristian Benestad</span>
+  <span class="sep">·</span>
+  <a href="https://docs.benestad.net/invoice">docs.benestad.net</a>
+  <span class="sep">·</span>
+  <a href="https://github.com/kbenestad/reimburse">kbenestad/reimburse</a>
+</footer>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="format-detection" content="telephone=no">
+<title>Timesheet — kBenestad reskin</title>
+<link rel="stylesheet" href="kbenestad-forms.css">
+<script>
+  (function(){var p=new URLSearchParams(location.search).get('theme');
+   if(p)document.documentElement.setAttribute('data-theme',p);})();
+</script>
+<style>
+  /* code colours come straight from timesheet-config.yml (codes[].colour-*) —
+     here as per-chip CSS vars so they stay fully configurable. */
+  .c-NON { --chip-border:#393939; --chip-bg:#d7d7d7; --chip-text:#393939; }
+  .c-REG { --chip-border:#0078d7; --chip-bg:#cce4f7; --chip-text:#0a4c87; }
+  .c-PPT { --chip-border:#ed616f; --chip-bg:#ffd9d9; --chip-text:#a8323d; }
+  .c-PPTp{ --chip-border:#ffb900; --chip-bg:#fff1cc; --chip-text:#8a6300; }
+  .c-OTH { --chip-border:#a4252c; --chip-bg:#edd4d5; --chip-text:#8a1f25; }
+  .c-UNP { --chip-border:#393939; --chip-bg:#d7d7d7; --chip-text:#393939; }
+  .c-HOL { --chip-border:#8cbd18; --chip-bg:#e8f2d1; --chip-text:#4f6b0d; }
+  :root[data-theme="dark"] .kb-chip { color: var(--chip-border); filter: saturate(1.1) brightness(1.15); }
+
+  .ts-head, .ts-row2 { grid-template-columns: 110px 102px 102px 110px 1fr 64px 30px; }
+  .ts-row2 input[type=time]{ font-family:var(--font-mono); }
+  .ts-date { font-weight:600; font-size:var(--fs-small); color:var(--text); white-space:nowrap; }
+  .ts-date .dow { display:block; font-weight:500; font-size:11px; color:var(--text-muted); }
+  .ts-legend { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6px; }
+  @media (max-width:680px){
+    .ts-head{display:none;}
+    .ts-row2{grid-template-columns:1fr 1fr;gap:8px;background:var(--surface-2);padding:12px;border-radius:var(--radius-sm);border-left-width:4px;}
+  }
+</style>
+</head>
+<body class="kb">
+<div class="kb-wrap">
+
+  <div class="kb-toolbar">
+    <div class="kb-seg" role="group" aria-label="Language">
+      <button class="is-active">EN</button><button>Tiếng Việt</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="kb-seg" role="group" aria-label="Text size">
+      <button>A−</button><button class="is-active">A</button><button>A+</button>
+    </div>
+    <button class="kb-iconbtn" aria-label="About">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zm.9 11.2H7.1v1.5h1.8v-1.5zm0-8.4H7.1v6.2h1.8V2.8z"/></svg>
+    </button>
+  </div>
+
+  <header class="kb-header">
+    <div class="kb-brand">
+      <span class="logo">CA</span>
+      <span class="org">Center for Asylum Protection<small>Timesheet · monthly</small></span>
+    </div>
+    <div class="kb-doctitle">
+      <h1>Timesheet</h1>
+      <div class="meta">1–7 June 2026</div>
+    </div>
+  </header>
+
+  <!-- employee meta -->
+  <section class="kb-card">
+    <div class="kb-grid cols-3" style="gap:14px 16px;">
+      <div class="kb-field"><span class="kb-label">Employee</span><input class="kb-input" value="Linh Tran"></div>
+      <div class="kb-field"><span class="kb-label">Employee type</span>
+        <select class="kb-select"><option>Monthly</option><option>Hourly</option><option>Freelance</option></select>
+      </div>
+      <div class="kb-field"><span class="kb-label">Period</span><input class="kb-input" value="1 Jun 2026 to 7 Jun 2026"></div>
+    </div>
+  </section>
+
+  <!-- entries -->
+  <section class="kb-card">
+    <h2 class="kb-card__title">Daily entries</h2>
+
+    <div class="ts-legend">
+      <span class="kb-chip c-REG"><span class="dot"></span>REG · Regular</span>
+      <span class="kb-chip c-PPT"><span class="dot"></span>PPT · Paid leave</span>
+      <span class="kb-chip c-OTH"><span class="dot"></span>OTH · Other paid</span>
+      <span class="kb-chip c-HOL"><span class="dot"></span>HOL · Holiday</span>
+      <span class="kb-chip c-UNP"><span class="dot"></span>UNP · Unpaid</span>
+      <span class="kb-chip c-NON"><span class="dot"></span>NON · Non-working</span>
+    </div>
+
+    <div class="kb-rowhead kb-row ts-head">
+      <span>Date</span><span>Time in</span><span>Time out</span><span>Code</span><span>Description</span><span class="r">Hours</span><span></span>
+    </div>
+
+    <div class="kb-row ts-row2 coded c-REG">
+      <span class="ts-date">Mon 1 Jun<span class="dow">Monday</span></span>
+      <input class="kb-input" type="time" value="09:00"><input class="kb-input" type="time" value="17:00">
+      <select class="kb-select"><option>REG</option></select>
+      <input class="kb-input" value="Case intake & client interviews">
+      <span class="r kb-mono">8.0</span>
+      <button class="kb-circbtn kb-circbtn--rm">−</button>
+    </div>
+
+    <div class="kb-row ts-row2 coded c-REG">
+      <span class="ts-date">Tue 2 Jun<span class="dow">Tuesday</span></span>
+      <input class="kb-input" type="time" value="09:00"><input class="kb-input" type="time" value="17:00">
+      <select class="kb-select"><option>REG</option></select>
+      <input class="kb-input" value="Protection assessment reports">
+      <span class="r kb-mono">8.0</span>
+      <button class="kb-circbtn kb-circbtn--rm">−</button>
+    </div>
+
+    <div class="kb-row ts-row2 coded c-PPTp">
+      <span class="ts-date">Wed 3 Jun<span class="dow">Wednesday</span></span>
+      <input class="kb-input" type="time" value="09:00"><input class="kb-input" type="time" value="13:00">
+      <select class="kb-select"><option>PPT</option></select>
+      <input class="kb-input" value="Medical appointment (half day)">
+      <span class="r kb-mono">4.0</span>
+      <button class="kb-circbtn kb-circbtn--rm">−</button>
+    </div>
+
+    <div class="kb-row ts-row2 coded c-HOL">
+      <span class="ts-date">Thu 4 Jun<span class="dow">Thursday</span></span>
+      <input class="kb-input" type="time" value="—" disabled><input class="kb-input" type="time" value="—" disabled>
+      <select class="kb-select" disabled><option>HOL</option></select>
+      <input class="kb-input" value="Public holiday" readonly>
+      <span class="r kb-mono">8.0</span>
+      <button class="kb-circbtn kb-circbtn--rm">−</button>
+    </div>
+
+    <div class="kb-row ts-row2 coded c-REG">
+      <span class="ts-date">Fri 5 Jun<span class="dow">Friday</span></span>
+      <input class="kb-input" type="time" value="09:00"><input class="kb-input" type="time" value="16:00">
+      <select class="kb-select"><option>REG</option></select>
+      <input class="kb-input" value="Team sync & documentation">
+      <span class="r kb-mono">7.0</span>
+      <button class="kb-circbtn kb-circbtn--rm">−</button>
+    </div>
+
+    <div style="margin-top:12px;"><button class="kb-btn kb-btn--dashed">+ Add row</button></div>
+  </section>
+
+  <!-- summary -->
+  <section class="kb-card">
+    <h2 class="kb-card__title">Summary</h2>
+    <div class="kb-totals kb-totals--fill">
+      <div class="row"><span class="lab">Total hours</span><span class="val">35.0</span></div>
+      <div class="row"><span class="lab">Of which paid leave</span><span class="val">4.0</span></div>
+      <div class="row"><span class="lab">Of which holiday</span><span class="val">8.0</span></div>
+      <div class="grand"><span class="lab">Total (decimal)</span><span class="val">35.00</span></div>
+    </div>
+  </section>
+
+  <!-- signatures -->
+  <section class="kb-card">
+    <h2 class="kb-card__title">Signatures</h2>
+    <div class="kb-grid cols-2" style="gap:18px;">
+      <div class="kb-field"><span class="kb-label">Employee signature</span><div class="kb-sig"></div></div>
+      <div class="kb-field"><span class="kb-label">Authorised signature</span><div class="kb-sig"></div></div>
+    </div>
+  </section>
+
+  <div style="display:flex;gap:12px;align-items:center;margin-top:8px;flex-wrap:wrap;">
+    <button class="kb-btn kb-btn--ghost">New timesheet</button>
+    <div style="flex:1;"></div>
+    <button class="kb-btn kb-btn--soft kb-btn--lg">Validate</button>
+    <button class="kb-btn kb-btn--primary kb-btn--lg">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a1 1 0 0 1 1 1v6.6l2.3-2.3a1 1 0 0 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 1.4-1.4L7 8.6V2a1 1 0 0 1 1-1zM3 13h10a1 1 0 1 1 0 2H3a1 1 0 1 1 0-2z"/></svg>
+      Generate Timesheet
+    </button>
+  </div>
+</div>
+
+<footer class="kb-footer">
+  <span class="kb-mark"><span class="glyph"><i></i><i></i></span>kBenestad</span>
+  <span class="sep">·</span>
+  <span>© 2026 Kristian Benestad</span>
+  <span class="sep">·</span>
+  <a href="https://docs.benestad.net">docs.benestad.net</a>
+  <span class="sep">·</span>
+  <a href="https://github.com/kbenestad/timesheet">kbenestad/timesheet</a>
+</footer>
+</body>
+</html>

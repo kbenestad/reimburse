@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>kBenestad — unified forms review</title>
+<link rel="stylesheet" href="kbenestad-forms.css">
+<style>
+  html,body{height:100%;}
+  body.kb{display:flex;flex-direction:column;min-height:100vh;background:var(--bg);}
+  .rv-bar{
+    position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--border);
+  }
+  .rv-title{display:flex;align-items:center;gap:11px;font-weight:700;font-size:15px;color:var(--text);letter-spacing:-.01em;}
+  .rv-title small{display:block;font-weight:500;font-size:12px;color:var(--text-muted);letter-spacing:0;}
+  .rv-bar .spacer{flex:1;}
+  .rv-bar .lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-right:-6px;}
+  .rv-stage{flex:1;padding:22px;display:flex;justify-content:center;}
+  .rv-framewrap{
+    width:100%;max-width:1000px;background:var(--surface);border:1px solid var(--border);
+    border-radius:14px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;
+  }
+  .rv-frametop{display:flex;align-items:center;gap:7px;padding:9px 14px;border-bottom:1px solid var(--border);background:var(--surface-2);}
+  .rv-dot{width:11px;height:11px;border-radius:50%;}
+  .rv-frameurl{margin-left:10px;font-family:var(--font-mono);font-size:12px;color:var(--text-muted);}
+  .rv-open{margin-left:auto;font-size:12px;font-weight:600;color:var(--accent);text-decoration:none;}
+  .rv-open:hover{text-decoration:underline;}
+  iframe{width:100%;height:1120px;border:0;background:var(--surface);display:block;}
+  @media (max-width:680px){ iframe{height:1500px;} }
+</style>
+<script>
+  (function(){var p=new URLSearchParams(location.search).get('theme');
+   if(p&&p!=='auto')document.documentElement.setAttribute('data-theme',p);})();
+</script>
+</head>
+<body class="kb">
+
+  <div class="rv-bar">
+    <div class="rv-title">
+      <span class="kb-mark"><span class="glyph"><i></i><i></i></span></span>
+      <span>kBenestad — unified forms<small>invoice · timesheet · reimburse — review build</small></span>
+    </div>
+    <div class="spacer"></div>
+    <span class="lbl">App</span>
+    <div class="kb-seg" id="appSeg">
+      <button data-app="invoice.html" class="is-active">Invoice</button>
+      <button data-app="timesheet.html">Timesheet</button>
+      <button data-app="reimburse.html">Reimburse</button>
+    </div>
+    <span class="lbl">Theme</span>
+    <div class="kb-seg" id="themeSeg">
+      <button data-theme="auto" class="is-active">Auto</button>
+      <button data-theme="light">Light</button>
+      <button data-theme="dark">Dark</button>
+    </div>
+  </div>
+
+  <div class="rv-stage">
+    <div class="rv-framewrap">
+      <div class="rv-frametop">
+        <span class="rv-dot" style="background:#e0625b;"></span>
+        <span class="rv-dot" style="background:#e2b23a;"></span>
+        <span class="rv-dot" style="background:#3bab63;"></span>
+        <span class="rv-frameurl" id="frameUrl">invoice.html</span>
+        <a class="rv-open" id="openLink" href="invoice.html" target="_blank" rel="noopener">Open full ↗</a>
+      </div>
+      <iframe id="frame" src="invoice.html" title="App preview"></iframe>
+    </div>
+  </div>
+
+<script>
+  var app = 'invoice.html', theme = 'auto';
+  var frame = document.getElementById('frame');
+  var frameUrl = document.getElementById('frameUrl');
+  var openLink = document.getElementById('openLink');
+
+  function src(){ return app + (theme==='auto' ? '' : '?theme='+theme); }
+  function render(){
+    frame.src = src();
+    frameUrl.textContent = src();
+    openLink.href = src();
+  }
+  function wire(segId, set){
+    var seg = document.getElementById(segId);
+    seg.addEventListener('click', function(e){
+      var b = e.target.closest('button'); if(!b) return;
+      [].forEach.call(seg.children, function(c){c.classList.remove('is-active');});
+      b.classList.add('is-active'); set(b); render();
+    });
+  }
+  wire('appSeg',   function(b){ app = b.dataset.app; });
+  wire('themeSeg', function(b){ theme = b.dataset.theme; });
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+/* ============================================================================
+   theme-kbenestad-auto.css
+   kBenestad — Forgejo theme (AUTO)
+   Follows the visitor's OS light/dark preference: kBenestad light by day,
+   kBenestad dark by night. Register as `kbenestad-auto` in app.ini [ui] THEMES.
+   ----------------------------------------------------------------------------
+   Media-conditional @imports load the matching kBenestad theme; the base
+   forgejo-auto import guarantees a complete variable set as a fallback.
+   ========================================================================== */
+
+@import "./theme-forgejo-auto.css";
+@import "./theme-kbenestad-light.css" (prefers-color-scheme: light);
+@import "./theme-kbenestad-dark.css"  (prefers-color-scheme: dark);
+
+:root { color-scheme: light dark; }

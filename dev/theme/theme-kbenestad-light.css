@@ -1,0 +1,472 @@
+/* ============================================================================
+   theme-kbenestad-light.css
+   kBenestad — Forgejo theme (LIGHT)
+   Nordic minimal: cool paper ground, near-black slate ink, one calm blue.
+
+   Install: drop this file in  custom/public/assets/css/
+   then in app.ini  [ui]
+     THEMES = forgejo-auto,forgejo-light,forgejo-dark,kbenestad-light,kbenestad-dark
+     DEFAULT_THEME = kbenestad-light
+   ----------------------------------------------------------------------------
+   Strategy: a COMPLETE, self-contained variable set (so the theme renders
+   correctly even when Forgejo's shipped base theme isn't present) followed by
+   the structural overrides that give kBenestad its identity — Schibsted Grotesk
+   type, accent-soft topic pills, flat buttons, hairline cards.
+
+   The forgejo-light import below is a harmless safety net: if the shipped file
+   exists it fills any future upstream variables; if it's missing it's ignored.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "./theme-forgejo-light.css";
+
+:root {
+  color-scheme: light;
+  --is-dark-theme: false;
+
+  /* ── Type ──────────────────────────────────────────────────────────────────
+     Forgejo resolves body type as  var(--fonts-override, var(--fonts-proportional)),
+     "Noto Sans", …  — so these vars ARE the hook. Marked !important to win even
+     if the shipped base theme sets them !important first (per Forgejo's docs). */
+  --fonts-proportional: "Schibsted Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif !important;
+  --fonts-regular: "Schibsted Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif !important;
+  --fonts-monospace: "JetBrains Mono", ui-monospace, "SFMono-Regular", "Cascadia Code", Menlo, Consolas, monospace !important;
+
+  /* ── Corners (kBenestad: 6px workhorse, 8px cards, small + deliberate) ──── */
+  --border-radius: 6px;
+  --border-radius-medium: 8px;
+  --border-radius-full: 99999px;
+
+  /* ── Accent — Nordic blue #2f6fed and its ramp ──────────────────────────── */
+  --color-primary:           #2f6fed;
+  --color-primary-contrast:  #ffffff;
+  --color-primary-dark-1:    #1f57cf;
+  --color-primary-dark-2:    #1b46a3;
+  --color-primary-dark-3:    #163b88;
+  --color-primary-dark-4:    #142e63;
+  --color-primary-dark-5:    #102450;
+  --color-primary-dark-6:    #0c1c3e;
+  --color-primary-dark-7:    #08142c;
+  --color-primary-light-1:   #5685e9;
+  --color-primary-light-2:   #88abf2;
+  --color-primary-light-3:   #b7cdf8;
+  --color-primary-light-4:   #d9e4fc;
+  --color-primary-light-5:   #eef3fe;
+  --color-primary-light-6:   #f5f8ff;
+  --color-primary-light-7:   #fafcff;
+  --color-primary-alpha-10:  rgba(47, 111, 237, 0.10);
+  --color-primary-alpha-20:  rgba(47, 111, 237, 0.20);
+  --color-primary-alpha-30:  rgba(47, 111, 237, 0.30);
+  --color-primary-alpha-40:  rgba(47, 111, 237, 0.40);
+  --color-primary-alpha-50:  rgba(47, 111, 237, 0.50);
+  --color-primary-alpha-60:  rgba(47, 111, 237, 0.60);
+  --color-primary-alpha-70:  rgba(47, 111, 237, 0.70);
+  --color-primary-alpha-80:  rgba(47, 111, 237, 0.80);
+  --color-primary-alpha-90:  rgba(47, 111, 237, 0.90);
+  --color-primary-hover:     #1f57cf;
+  --color-primary-active:    #1b46a3;
+
+  /* ── Secondary (neutral fills, borders, secondary buttons) ──────────────── */
+  --color-secondary:         #e7eaef;
+  --color-secondary-dark-1:  #d8dde4;
+  --color-secondary-dark-2:  #c7cdd6;
+  --color-secondary-dark-3:  #aab2bd;
+  --color-secondary-dark-4:  #97a0ac;
+  --color-secondary-dark-5:  #7b8694;
+  --color-secondary-dark-6:  #6b7785;
+  --color-secondary-dark-7:  #56606d;
+  --color-secondary-dark-8:  #3a434f;
+  --color-secondary-dark-9:  #2c343d;
+  --color-secondary-dark-10: #232a33;
+  --color-secondary-dark-11: #1b212a;
+  --color-secondary-dark-12: #14181e;
+  --color-secondary-dark-13: #0f141a;
+  --color-secondary-light-1: #eef0f4;
+  --color-secondary-light-2: #f1f3f6;
+  --color-secondary-light-3: #f5f6f9;
+  --color-secondary-light-4: #f8f9fb;
+  --color-secondary-alpha-10: rgba(123, 134, 148, 0.10);
+  --color-secondary-alpha-20: rgba(123, 134, 148, 0.20);
+  --color-secondary-alpha-30: rgba(123, 134, 148, 0.30);
+  --color-secondary-alpha-40: rgba(123, 134, 148, 0.40);
+  --color-secondary-alpha-50: rgba(123, 134, 148, 0.50);
+  --color-secondary-alpha-60: rgba(123, 134, 148, 0.60);
+  --color-secondary-alpha-70: rgba(123, 134, 148, 0.70);
+  --color-secondary-alpha-80: rgba(123, 134, 148, 0.80);
+  --color-secondary-alpha-90: rgba(123, 134, 148, 0.90);
+  --color-secondary-button:  #d8dde4;
+  --color-secondary-hover:   #f1f3f6;
+  --color-secondary-active:  #e7eaef;
+
+  /* ── Text / ink ─────────────────────────────────────────────────────────── */
+  --color-text-dark:      #0d1117;
+  --color-text:           #14181e;
+  --color-text-light:     #3a434f;
+  --color-text-light-1:   #56606d;
+  --color-text-light-2:   #7b8694;
+  --color-text-light-3:   #aab2bd;
+  --color-placeholder-text: #aab2bd;
+  --color-text-focus:     #ffffff;
+
+  /* ── Surfaces ──────────────────────────────────────────────────────────── */
+  --color-body:           #f8f9fb;   /* page ground (cool paper)  */
+  --color-box-body:       #ffffff;   /* cards, file list, panels  */
+  --color-box-body-highlight: #f5f8ff;
+  --color-box-header:     #f8f9fb;   /* segment / table headers   */
+  --color-nav-bg:         #ffffff;   /* top navbar                */
+  --color-nav-hover-bg:   #f1f3f6;
+  --color-secondary-nav-bg: #f8f9fb;
+  --color-footer:         #ffffff;
+  --color-light:          rgba(123, 134, 148, 0.04);
+  --color-light-mimic-enabled: rgba(0, 0, 0, calc(6 / 255));
+  --color-light-border:   #e7eaef;
+  --color-hover:          #f1f3f6;   /* row / item hover          */
+  --color-active:         #e7eaef;   /* active row                */
+  --color-menu:           #ffffff;
+  --color-card:           #ffffff;
+  --fancy-card-bg:        #ffffff;
+  --fancy-card-border:    #e7eaef;
+  --color-markup-tab-default: var(--color-box-header);
+  --color-markup-tab-active:  var(--color-box-body);
+  --color-header-wrapper: #ffffff;
+  --color-header-wrapper-transparent: rgba(255, 255, 255, 0);
+
+  /* ── Inputs ────────────────────────────────────────────────────────────── */
+  --color-input-text:          #14181e;
+  --color-input-background:    #ffffff;
+  --color-input-toggle-background: #ffffff;
+  --color-input-border:        #d8dde4;
+  --color-input-border-hover:  #aab2bd;
+
+  /* ── Borders / dividers ────────────────────────────────────────────────── */
+  --color-border:        #e7eaef;
+  --color-secondary-bg:  #f1f3f6;
+
+  /* ── Code / markup ─────────────────────────────────────────────────────── */
+  --color-markup-code-block:  #f1f3f6;
+  --color-markup-code-inline: #eef0f4;
+  --color-markup-table-row:   rgba(0, 0, 0, 0.024);
+  --color-code-bg:            #ffffff;
+  --color-code-sidebar-bg:    #f8f9fb;
+
+  /* ── Shadows (soft, cool, low opacity) ─────────────────────────────────── */
+  --color-shadow:        rgba(20, 24, 30, 0.06);
+  --color-secondary-shadow: rgba(20, 24, 30, 0.04);
+
+  /* ── Accent line / selection / timeline / caret ────────────────────────── */
+  --color-accent:        #2f6fed;
+  --color-small-accent:  #eef3fe;
+  --color-active-line:   #eef3fe;
+  --color-editor-line-highlight: #f5f8ff;
+  --color-timeline:      #e7eaef;
+  --color-caret:         #14181e;
+  --color-highlight-fg:  #1f57cf;
+  --color-highlight-bg:  rgba(47, 111, 237, 0.10);
+  --color-selection-bg:  #d9e4fc;
+  --color-selection-fg:  #14181e;
+  --color-overlay-backdrop: rgba(20, 24, 30, 0.32);
+
+  /* ── Semantic hues (muted, never neon) ─────────────────────────────────── */
+  --color-red:     #d64545;
+  --color-orange:  #c9851f;
+  --color-yellow:  #c9851f;
+  --color-olive:   #8a8a2f;
+  --color-green:   #1f9d5f;
+  --color-teal:    #1f8a8a;
+  --color-blue:    #2f6fed;
+  --color-violet:  #6b5fd2;
+  --color-purple:  #8a4fd2;
+  --color-pink:    #cf4f8a;
+  --color-brown:   #8a6b4f;
+  --color-grey:    #7b8694;
+  --color-gold:    #c9851f;
+  --color-white:   #ffffff;
+  --color-black:   #14181e;
+  --color-pure-black: #000000;
+
+  /* light variants */
+  --color-red-light:    #e06464;
+  --color-green-light:  #34b677;
+  --color-blue-light:   #5685e9;
+  --color-grey-light:   #aab2bd;
+
+  /* dark-1 variants */
+  --color-red-dark-1:    #b8332f;
+  --color-green-dark-1:  #178049;
+  --color-blue-dark-1:   #1f57cf;
+
+  /* Status text / background / border */
+  --color-success-text:   #178049;
+  --color-success-bg:     #d7f0e1;
+  --color-success-border: #aee0c4;
+  --color-error-text:     #b8332f;
+  --color-error-bg:       #fadcdc;
+  --color-error-bg-active:#f3bcbc;
+  --color-error-bg-hover: #fbe6e6;
+  --color-error-border:   #f3bcbc;
+  --color-warning-text:   #a86c14;
+  --color-warning-bg:     #fbeacb;
+  --color-warning-border: #f3d79a;
+  --color-info-text:      #1b46a3;
+  --color-info-bg:        #eef3fe;
+  --color-info-border:    #b7cdf8;
+  --color-danger-bg:      #fbeeee;
+
+  /* Diff */
+  --color-diff-removed-word-bg: #f3bcbc;
+  --color-diff-added-word-bg:   #aee0c4;
+  --color-diff-removed-row-bg:  #fbeeee;
+  --color-diff-added-row-bg:    #e9f7ef;
+  --color-diff-removed-row-border: #f3d2d2;
+  --color-diff-added-row-border:   #cfeadd;
+  --color-diff-moved-row-bg:    #fbeacb;
+  --color-diff-moved-row-border:#f3d79a;
+  --color-diff-inactive:        #f1f3f6;
+
+  /* Labels / reactions / tooltip / nav */
+  --color-label-text:        #3a434f;
+  --color-label-bg:          #e7eaef;
+  --color-label-hover-bg:    #d8dde4;
+  --color-label-active-bg:   #c7cdd6;
+  --color-reaction-bg:       #f1f3f6;
+  --color-reaction-hover-bg: rgba(47, 111, 237, 0.20);
+  --color-reaction-active-bg: rgba(47, 111, 237, 0.30);
+  --color-tooltip-text:      #ffffff;
+  --color-tooltip-bg:        #232a33;
+  --color-button:            #d8dde4;
+  --color-expand-button:     #e7eaef;
+
+  /* badges */
+  --color-red-badge:    #d64545;
+  --color-red-badge-bg: rgba(214, 69, 69, 0.13);
+  --color-red-badge-bg-hover: rgba(214, 69, 69, 0.27);
+  --color-green-badge:  #1f9d5f;
+  --color-green-badge-bg: rgba(31, 157, 95, 0.13);
+  --color-green-badge-bg-hover: rgba(31, 157, 95, 0.27);
+  --color-yellow-badge: #c9851f;
+  --color-yellow-badge-bg: rgba(201, 133, 31, 0.13);
+  --color-yellow-badge-bg-hover: rgba(201, 133, 31, 0.27);
+  --color-orange-badge: #c9851f;
+  --color-orange-badge-bg: rgba(201, 133, 31, 0.13);
+  --color-orange-badge-bg-hover: rgba(201, 133, 31, 0.27);
+
+  /* status indicators */
+  --color-indicator-offline: #aab2bd;
+  --color-indicator-idle:    #c9851f;
+  --color-indicator-active:  #1f9d5f;
+
+  /* checkerboard (image diff) */
+  --checkerboard-color-1: #ffffff;
+  --checkerboard-color-2: #f1f3f6;
+
+  /* project board */
+  --color-project-board-bg: #f8f9fb;
+
+  /* console — calm dark surface */
+  --color-console-fg:        #e6e9ef;
+  --color-console-fg-subtle: #8b95a1;
+  --color-console-bg:        #161b22;
+  --color-console-border:    #232a33;
+  --color-console-hover-bg:  rgba(255, 255, 255, 0.06);
+  --color-console-active-bg: rgba(255, 255, 255, 0.10);
+  --color-console-menu-bg:   #1c232c;
+  --color-console-menu-border:#2d3641;
+
+  accent-color: var(--color-accent);
+}
+
+/* ===========================================================================
+   STRUCTURAL OVERRIDES — kBenestad identity, mirroring the design mockup.
+   Scoped, conservative, modeled on real Forgejo / Semantic-UI selectors.
+   ========================================================================== */
+
+/* ── Type: enforce the kBenestad faces everywhere ───────────────────────────
+   Setting the variable alone isn't enough when a privacy blocker or CSP stops
+   the web font from loading on the var fallback. We force the family directly,
+   so the moment the font is available (web or self-hosted) it renders. */
+body,
+input, button, select, textarea, optgroup,
+.ui, .ui.menu, .ui.header, .ui.form, .ui.dropdown,
+.ui.dropdown .menu > .item, .ui.input > input,
+.markup, h1, h2, h3, h4, h5, h6,
+.repo-header, .repository .header-wrapper, .commit-summary, .file-info {
+  font-family: var(--fonts-proportional) !important;
+}
+code, pre, tt, kbd, samp, .mono,
+.ui.input.mono, .commit-id, .sha, .ui.label.commit-id,
+.code-view, .lines-code, .lines-num, .CodeMirror,
+.markup code, .markup pre, .markup tt {
+  font-family: var(--fonts-monospace) !important;
+}
+body {
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Primary / positive buttons — flat accent, no gloss ─────────────────── */
+.ui.primary.button,
+.ui.primary.buttons .button,
+.ui.positive.button,
+.ui.positive.buttons .button {
+  background: var(--color-primary) !important;
+  color: #fff !important;
+  border-color: var(--color-primary) !important;
+  font-weight: 600;
+  box-shadow: none !important;
+}
+.ui.primary.button:hover,
+.ui.primary.buttons .button:hover,
+.ui.positive.button:hover,
+.ui.positive.buttons .button:hover {
+  background: var(--color-primary-hover) !important;
+  border-color: var(--color-primary-hover) !important;
+}
+
+/* ── Default / secondary buttons — calm, hairline, no shadow ────────────── */
+.ui.button {
+  font-weight: 500;
+  box-shadow: none;
+}
+.ui.basic.button,
+.ui.basic.buttons .button {
+  box-shadow: inset 0 0 0 1px var(--color-border) !important;
+}
+
+/* ── Repo tabs — accent active label + accent underline ─────────────────────
+   The repo tab bar is Forgejo's `.ui.secondary.pointing.menu`; the active item's
+   colour is set by the full active/hover/focus/dropdown selector group, so we
+   match it verbatim to actually win the cascade. */
+.ui.secondary.pointing.menu .active.item,
+.ui.secondary.pointing.menu .active.item:hover,
+.ui.secondary.pointing.menu .active.item:focus,
+.ui.secondary.pointing.menu .dropdown.item:hover,
+.ui.secondary.pointing.menu .dropdown.item:focus,
+.ui.tabular.menu .active.item {
+  color: var(--color-accent) !important;
+  border-color: var(--color-primary) !important;
+  font-weight: 600;
+}
+.ui.secondary.pointing.menu .item:hover {
+  color: var(--color-text) !important;
+}
+/* Tab count pills (12 · 3 · 4) render as plain `.ui.label` inside each item →
+   accent-tinted instead of flat grey. */
+.ui.secondary.pointing.menu .item .ui.label,
+.ui.tabular.menu .item .ui.label {
+  background: var(--color-primary-alpha-10) !important;
+  color: var(--color-accent) !important;
+  border: 1px solid var(--color-primary-alpha-20) !important;
+}
+.ui.secondary.pointing.menu .active.item .ui.label,
+.ui.tabular.menu .active.item .ui.label {
+  background: var(--color-primary) !important;
+  color: #fff !important;
+  border-color: var(--color-primary) !important;
+}
+
+/* ── Repo header title — owner / name carry the accent (branded chrome) ── */
+.repo-header .flex-text-block a,
+.repo-header .repo-title a,
+.repository .header-wrapper .repo-title a {
+  color: var(--color-accent) !important;
+}
+.repo-header .flex-text-block a:hover { text-decoration: underline; }
+/* Watch / Star / Fork stay button-coloured — never accent text */
+.repo-header .repo-buttons a,
+.repo-header .repo-buttons .ui.button {
+  color: var(--color-text) !important;
+}
+
+/* ── Repo topics → real accent pills (clearly blue, never grey) ─────────────
+   Forgejo's topic markup has shifted across versions (#repo-topics > a,
+   a.repo-topic, a.topic.label …) — match them all so the chips are always
+   branded, with a visible blue fill + ring instead of the pale wash. */
+#repo-topics a,
+#repo-topics .ui.label,
+a.repo-topic,
+a.repo-topic.ui.label,
+.repository-topics a.ui.label,
+.topic.ui.label,
+a.topic.label {
+  background: var(--color-primary-alpha-10) !important;
+  color: var(--color-accent) !important;
+  border: 1px solid var(--color-primary-alpha-30) !important;
+  border-radius: var(--border-radius-full) !important;
+  font-weight: 600 !important;
+}
+#repo-topics a:hover,
+a.repo-topic:hover,
+.topic.ui.label:hover {
+  background: var(--color-primary) !important;
+  color: #fff !important;
+  border-color: var(--color-primary) !important;
+}
+
+/* ── Extra interactive coverage — the bits that quietly stay grey ──────────
+   Dropdowns, pagination, form focus, toggles and progress bars across the rest
+   of the app, pulled onto the accent so the brand reads everywhere, not just on
+   the repo home. Trim any rule you don't want. */
+
+/* Dropdown / select menus — selected + active item in accent */
+.ui.dropdown .menu > .item.selected,
+.ui.dropdown .menu > .item.active,
+.ui.selection.dropdown .menu > .item.active.selected {
+  color: var(--color-accent) !important;
+  background: var(--color-primary-alpha-10) !important;
+}
+
+/* Pagination — current page in solid accent */
+.ui.pagination.menu .active.item {
+  background: var(--color-primary) !important;
+  color: #fff !important;
+}
+
+/* Form fields — accent focus ring instead of the default grey/teal */
+.ui.input input:focus,
+.ui.form input:focus,
+.ui.form textarea:focus,
+.ui.selection.active.dropdown,
+.ui.selection.dropdown:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 2px var(--color-primary-alpha-20) !important;
+}
+
+/* Checkboxes, radios, toggles — checked state in accent */
+.ui.checkbox input:checked ~ .box::before,
+.ui.checkbox input:checked ~ label::before,
+.ui.radio.checkbox input:checked ~ .box::before,
+.ui.radio.checkbox input:checked ~ label::before,
+.ui.toggle.checkbox input:checked ~ .box::before,
+.ui.toggle.checkbox input:checked ~ label::before {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+}
+
+/* Progress bars (upload, migration, theme-driven stats) */
+.ui.progress .bar {
+  background: var(--color-primary) !important;
+}
+
+/* ── Cards / segments — 8px corners, hairline border, faint cool shadow ─── */
+.ui.segment,
+.ui.segments,
+.ui.attached.segment,
+.repository-summary,
+.repo-description-box,
+.ui.card,
+.ui.cards > .card {
+  box-shadow: 0 1px 0 var(--color-shadow);
+}
+.ui.segments,
+.ui.card,
+.ui.cards > .card {
+  border-radius: var(--border-radius-medium);
+}
+
+/* ── Links — accent, underline only on hover (matches mockup chrome) ────── */
+a { text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Octicons stay legible on light chrome ──────────────────────────────── */
+.svg, .gt-octicon, .octicon { fill: currentColor; }

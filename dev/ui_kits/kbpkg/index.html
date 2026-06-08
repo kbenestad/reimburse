@@ -1,0 +1,118 @@
+<!-- @dsCard group="kbpkg" viewport="1280x860" name="kbpkg registry" subtitle="Flagship — git-based package registry & package pages" -->
+<!-- @startingPoint section="kbpkg" subtitle="Package registry home with search & package detail" viewport="1280x860" -->
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>kbpkg — registry</title>
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  body { background: var(--surface-page); color: var(--text-body); }
+
+  /* Header */
+  .kb-header { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 32px;
+    height: 60px; padding: 0 28px; background: color-mix(in srgb, var(--surface-card) 88%, transparent);
+    backdrop-filter: saturate(1.1) blur(8px); border-bottom: var(--border-thin) solid var(--border-subtle); }
+  .kb-nav { display: flex; gap: 4px; flex: 1; }
+  .kb-nav__item { font-size: var(--text-body); font-weight: var(--weight-medium); color: var(--text-muted);
+    padding: 6px 10px; border-radius: var(--radius-sm); cursor: pointer; }
+  .kb-nav__item:hover { color: var(--text-strong); background: var(--surface-hover); text-decoration: none; }
+  .kb-nav__item.is-active { color: var(--text-strong); }
+
+  /* Page shell */
+  .kb-page { max-width: 920px; margin: 0 auto; padding: 40px 28px 80px; }
+
+  /* Hero */
+  .kb-hero { margin-bottom: 36px; }
+  .kb-hero__title { font-size: var(--text-h1); font-weight: var(--weight-bold); margin: 10px 0 8px; }
+  .kb-hero__sub { font-size: var(--text-body-lg); color: var(--text-muted); max-width: 52ch; }
+  .kb-search { display: flex; align-items: center; gap: 10px; margin-top: 24px; padding: 0 16px; height: 48px;
+    background: var(--surface-card); border: var(--border-thin) solid var(--border-default);
+    border-radius: var(--radius-lg); transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out); }
+  .kb-search:focus-within { border-color: var(--border-focus); box-shadow: var(--focus-ring); }
+  .kb-search input { flex: 1; border: none; outline: none; background: none; font-family: var(--font-sans);
+    font-size: var(--text-body-lg); color: var(--text-strong); }
+  .kb-search input::placeholder { color: var(--text-subtle); }
+  .kb-filters { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+
+  /* List */
+  .kb-listhead { display: flex; justify-content: space-between; font-size: var(--text-body-sm);
+    color: var(--text-muted); padding: 0 4px 12px; border-bottom: var(--border-thin) solid var(--border-subtle); }
+  .kb-list { display: flex; flex-direction: column; }
+  .kb-pkg { display: flex; gap: 16px; padding: 20px 16px; border-bottom: var(--border-thin) solid var(--border-subtle);
+    cursor: pointer; border-radius: var(--radius-md); transition: background var(--duration-fast) var(--ease-out); margin: 0 -16px; }
+  .kb-pkg:hover { background: var(--surface-card); }
+  .kb-pkg__body { flex: 1; min-width: 0; }
+  .kb-pkg__top { display: flex; align-items: center; gap: 10px; }
+  .kb-pkg__name { font-family: var(--font-mono); font-weight: var(--weight-semibold); font-size: var(--text-body-lg); color: var(--text-strong); }
+  .kb-pkg__desc { font-size: var(--text-body); color: var(--text-body); margin: 4px 0 10px; }
+  .kb-pkg__tags { display: flex; gap: 7px; flex-wrap: wrap; }
+  .kb-pkg__meta { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; font-size: var(--text-body-sm); color: var(--text-muted); white-space: nowrap; }
+  .kb-pkg__meta span { display: inline-flex; align-items: center; gap: 5px; }
+  .kb-empty { padding: 40px 0; text-align: center; color: var(--text-muted); }
+
+  /* Install command */
+  .kb-cmd { display: flex; align-items: center; gap: 12px; background: var(--term-bg); border-radius: var(--radius-md);
+    padding: 0 8px 0 18px; height: 50px; margin: 22px 0 28px; }
+  .kb-cmd__prompt { color: var(--term-green); font-family: var(--font-mono); }
+  .kb-cmd__text { flex: 1; color: var(--term-fg); font-family: var(--font-mono); font-size: var(--text-mono); }
+  .kb-cmd__copy { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.08); color: var(--term-fg);
+    border: none; border-radius: var(--radius-sm); padding: 8px 12px; font-family: var(--font-sans); font-size: var(--text-body-sm);
+    font-weight: var(--weight-medium); cursor: pointer; }
+  .kb-cmd__copy:hover { background: rgba(255,255,255,.16); }
+
+  /* Package detail */
+  .kb-crumb { display: flex; align-items: center; gap: 8px; font-size: var(--text-body-sm); color: var(--text-muted); margin-bottom: 20px; }
+  .kb-crumb a { color: var(--text-muted); cursor: pointer; }
+  .kb-crumb a:hover { color: var(--text-strong); text-decoration: none; }
+  .kb-pkghead { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+  .kb-pkghead__name { font-family: var(--font-mono); font-size: var(--text-h2); font-weight: var(--weight-bold); display: flex; align-items: center; gap: 12px; }
+  .kb-pkghead__desc { font-size: var(--text-body-lg); color: var(--text-muted); margin-top: 8px; max-width: 56ch; }
+  .kb-cols { display: grid; grid-template-columns: 1fr 280px; gap: 36px; }
+  .kb-main { min-width: 0; }
+  .kb-tabpanel { padding-top: 24px; }
+  .kb-prose h3 { font-family: var(--font-mono); font-size: var(--text-h4); margin-bottom: 12px; }
+  .kb-prose p { color: var(--text-body); line-height: var(--leading-relaxed); margin-bottom: 14px; max-width: 64ch; }
+  .kb-versions { display: flex; flex-direction: column; }
+  .kb-version { display: flex; justify-content: space-between; align-items: center; padding: 13px 6px;
+    border-bottom: var(--border-thin) solid var(--border-subtle); }
+  .kb-version__v { font-weight: var(--weight-semibold); color: var(--text-strong); display: inline-flex; align-items: center; gap: 10px; }
+  .kb-version__when { font-size: var(--text-body-sm); color: var(--text-muted); }
+  .kb-side { display: flex; flex-direction: column; gap: 18px; }
+  .kb-meta { display: flex; flex-direction: column; gap: 0; border: var(--border-thin) solid var(--border-subtle); border-radius: var(--radius-lg); overflow: hidden; }
+  .kb-meta__row { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; font-size: var(--text-body-sm);
+    border-bottom: var(--border-thin) solid var(--border-subtle); }
+  .kb-meta__row:last-child { border-bottom: none; }
+  .kb-meta__label { display: inline-flex; align-items: center; gap: 8px; color: var(--text-muted); }
+  .kb-meta__val { color: var(--text-strong); font-weight: var(--weight-medium); white-space: nowrap; }
+  .kb-link { color: var(--text-link); display: inline-flex; align-items: center; gap: 5px; }
+
+  @media (max-width: 760px) { .kb-cols { grid-template-columns: 1fr; } .kb-nav { display: none; } }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="data.js"></script>
+  <script type="text/babel" src="ui.jsx"></script>
+  <script type="text/babel" src="screens.jsx"></script>
+  <script type="text/babel">
+    const { Header, Registry, PackagePage, useState } = window;
+    function App() {
+      const [pkg, setPkg] = useState(null);
+      const open = (p) => { setPkg(p); window.scrollTo(0, 0); };
+      const home = () => { setPkg(null); window.scrollTo(0, 0); };
+      return (
+        <div>
+          <Header onHome={home} />
+          {pkg ? <PackagePage pkg={pkg} onHome={home} onOpen={open} /> : <Registry onOpen={open} />}
+        </div>
+      );
+    }
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

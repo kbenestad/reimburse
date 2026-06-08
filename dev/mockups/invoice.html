@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="format-detection" content="telephone=no">
+<title>Invoice — kBenestad reskin</title>
+<link rel="stylesheet" href="kbenestad-forms.css">
+<script>
+  // allow the review page to force a theme: invoice.html?theme=dark
+  (function(){var p=new URLSearchParams(location.search).get('theme');
+   if(p)document.documentElement.setAttribute('data-theme',p);})();
+</script>
+<style>
+  /* invoice-specific composition (structural only; all colour/type from shared sheet) */
+  .inv-lines-head { grid-template-columns: 1fr 70px 70px 110px 120px 34px; }
+  .inv-line       { grid-template-columns: 1fr 70px 70px 110px 120px 34px; }
+  .inv-tax-head   { grid-template-columns: 1fr 90px 130px 34px; }
+  .inv-tax        { grid-template-columns: 1fr 90px 130px 34px; }
+  @media (max-width:680px){
+    .inv-lines-head{display:none;}
+    .inv-line,.inv-tax{grid-template-columns:1fr 1fr;gap:6px 10px;background:var(--surface-2);padding:12px;border-radius:var(--radius-sm);}
+  }
+</style>
+</head>
+<body class="kb">
+<div class="kb-wrap">
+
+  <!-- utility toolbar -->
+  <div class="kb-toolbar">
+    <div class="kb-seg" role="group" aria-label="Language">
+      <button class="is-active">EN</button><button>DE</button><button>FR</button><button>NO</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="kb-seg" role="group" aria-label="Text size">
+      <button aria-label="Smaller">A−</button><button class="is-active">A</button><button aria-label="Larger">A+</button>
+    </div>
+    <button class="kb-iconbtn" aria-label="About">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0zm.9 11.2H7.1v1.5h1.8v-1.5zm0-8.4H7.1v6.2h1.8V2.8z"/></svg>
+    </button>
+  </div>
+
+  <!-- header: issuer (customer of kBenestad) leads -->
+  <header class="kb-header">
+    <div class="kb-brand">
+      <span class="logo">NM</span>
+      <span class="org">Nordmann Consulting<small>Org. 998 877 665 · Oslo, Norway</small></span>
+    </div>
+    <div class="kb-doctitle">
+      <h1>Invoice</h1>
+      <div class="meta">No. INV-2026-0042 · 6 June 2026</div>
+    </div>
+  </header>
+
+  <!-- bill-to + details -->
+  <div class="kb-grid cols-2" style="margin-bottom:16px;">
+    <section class="kb-card" style="margin:0;">
+      <h2 class="kb-card__title">Bill to</h2>
+      <div class="kb-grid">
+        <div class="kb-field">
+          <span class="kb-label">Recipient</span>
+          <select class="kb-select"><option>Acme Corporation</option><option>Example NGO</option><option>Other…</option></select>
+        </div>
+        <div class="kb-field">
+          <span class="kb-label">Address</span>
+          <input class="kb-input" value="Acme Corporation Ltd., 123 Business Avenue, Suite 400" readonly>
+        </div>
+        <div class="kb-grid cols-2" style="gap:14px 16px;">
+          <div class="kb-field"><span class="kb-label">VAT ID</span><input class="kb-input" value="US-EIN-12-3456789" readonly></div>
+          <div class="kb-field"><span class="kb-label">Project code</span>
+            <select class="kb-select"><option>AC-100</option><option>AC-110</option><option>AC-200</option></select>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="kb-card" style="margin:0;">
+      <h2 class="kb-card__title">Details</h2>
+      <div class="kb-grid cols-2" style="gap:14px 16px;">
+        <div class="kb-field"><span class="kb-label">Issue date</span><input class="kb-input" value="6 June 2026"></div>
+        <div class="kb-field"><span class="kb-label">Due date</span><input class="kb-input" value="6 July 2026"></div>
+        <div class="kb-field"><span class="kb-label">Currency</span>
+          <select class="kb-select"><option>USD — US dollar</option><option>EUR — Euro</option><option>NOK — Norwegian krone</option></select>
+        </div>
+        <div class="kb-field"><span class="kb-label">Terms</span><input class="kb-input" value="Net 30"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- line items -->
+  <section class="kb-card">
+    <h2 class="kb-card__title">Line items <span class="count">2 lines</span></h2>
+    <div class="kb-rowhead kb-row inv-lines-head">
+      <span>Description</span><span class="r">Qty</span><span>Unit</span><span class="r">Unit price</span><span class="r">Amount</span><span></span>
+    </div>
+    <div class="kb-row inv-line">
+      <input class="kb-input" value="Consulting Services">
+      <input class="kb-input num" value="40">
+      <select class="kb-select"><option>Hour</option><option>Day</option></select>
+      <input class="kb-input num" value="100.00">
+      <span class="r kb-mono">4,000.00</span>
+      <button class="kb-circbtn kb-circbtn--rm" aria-label="Remove">−</button>
+    </div>
+    <div class="kb-row inv-line">
+      <input class="kb-input" value="On-site Training Workshop">
+      <input class="kb-input num" value="2">
+      <select class="kb-select"><option>Day</option><option>Hour</option></select>
+      <input class="kb-input num" value="800.00">
+      <span class="r kb-mono">1,600.00</span>
+      <button class="kb-circbtn kb-circbtn--rm" aria-label="Remove">−</button>
+    </div>
+    <div style="margin-top:12px;">
+      <button class="kb-btn kb-btn--dashed">+ Add line</button>
+    </div>
+  </section>
+
+  <!-- tax + totals -->
+  <div class="kb-grid cols-2">
+    <section class="kb-card" style="margin:0;">
+      <h2 class="kb-card__title">Tax</h2>
+      <div class="kb-rowhead kb-row inv-tax-head">
+        <span>Type</span><span class="r">Rate %</span><span class="r">Amount</span><span></span>
+      </div>
+      <div class="kb-row inv-tax">
+        <select class="kb-select"><option>VAT</option><option>GST</option><option>Sales Tax</option></select>
+        <input class="kb-input num" value="25">
+        <span class="r kb-mono">1,400.00</span>
+        <button class="kb-circbtn kb-circbtn--rm" aria-label="Remove">−</button>
+      </div>
+      <div style="margin-top:12px;"><button class="kb-btn kb-btn--dashed">+ Add tax line</button></div>
+    </section>
+
+    <section class="kb-card kb-card--flex" style="margin:0;">
+      <h2 class="kb-card__title">Summary</h2>
+      <div class="kb-totals kb-totals--fill">
+        <div class="row"><span class="lab">Subtotal</span><span class="val">5,600.00</span></div>
+        <div class="row"><span class="lab">VAT 25%</span><span class="val">1,400.00</span></div>
+        <div class="grand"><span class="lab">Total due (USD)</span><span class="val">7,000.00</span></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- payment info -->
+  <section class="kb-card">
+    <h2 class="kb-card__title">Payment information</h2>
+    <div class="kb-grid cols-3" style="gap:14px 16px;">
+      <div class="kb-field"><span class="kb-label">Bank</span><input class="kb-input" value="DNB Bank ASA"></div>
+      <div class="kb-field"><span class="kb-label">IBAN</span><input class="kb-input kb-mono" value="NO93 8601 1117 947"></div>
+      <div class="kb-field"><span class="kb-label">SWIFT / BIC</span><input class="kb-input kb-mono" value="DNBANOKK"></div>
+    </div>
+  </section>
+
+  <button class="kb-btn kb-btn--primary kb-btn--lg kb-btn--block" style="margin-top:8px;">
+    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a1 1 0 0 1 1 1v6.6l2.3-2.3a1 1 0 0 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 1.4-1.4L7 8.6V2a1 1 0 0 1 1-1zM3 13h10a1 1 0 1 1 0 2H3a1 1 0 1 1 0-2z"/></svg>
+    Generate Invoice PDF
+  </button>
+</div>
+
+<footer class="kb-footer">
+  <span class="kb-mark"><span class="glyph"><i></i><i></i></span>kBenestad</span>
+  <span class="sep">·</span>
+  <span>© 2026 Kristian Benestad</span>
+  <span class="sep">·</span>
+  <a href="https://docs.benestad.net/invoice">docs.benestad.net</a>
+  <span class="sep">·</span>
+  <a href="https://github.com/kbenestad/invoice">kbenestad/invoice</a>
+</footer>
+</body>
+</html>
