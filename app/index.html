@@ -1207,22 +1207,28 @@ async function generatePDF() {
   const doc = await PDFDocument.create();
   const pageW = CFG['page-size'] === 'letter' ? 612 : 595.28;
   const pageH = CFG['page-size'] === 'letter' ? 792 : 841.89;
-  const M = { top: 50, bottom: 65, left: 50, right: 50 };
+  const M = { top: 52, bottom: 65, left: 48, right: 48 };
   const W = pageW - M.left - M.right;
 
   const fontBody = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
   const fontMono = await doc.embedFont(StandardFonts.Courier);
-  const sz = CFG['font-size'] || 10;
+  const sz  = CFG['font-size'] || 10;
   const szSm = sz - 1;
-  const szLg = sz + 4;
-  const szXl = sz + 6;
-  const lh = sz + 4;
+  const szXs = Math.max(sz - 2, 7);  // eyebrow labels
+  const szLg = sz + 4;               // section headings, grand total figure
+  const lh  = sz + 5;                // line height
 
-  const accent = parseHex(CFG['accent-colour'] || '#2F6FED');
-  const black = rgb(0.13, 0.13, 0.13);
-  const gray = rgb(0.45, 0.45, 0.45);
-  const lineCol = rgb(0.75, 0.75, 0.75);
+  // ── kBenestad color tokens ────────────────────────────────────────────────
+  const clrAccent       = parseHex(CFG['accent-colour'] || '#2F6FED');
+  const clrText         = rgb(0.078, 0.094, 0.118);    // #14181E
+  const clrTextSoft     = rgb(0.227, 0.263, 0.310);    // #3A434F
+  const clrMuted        = rgb(0.373, 0.412, 0.459);    // #5F6975
+  const clrBorder       = rgb(0.890, 0.918, 0.933);    // #E3E7EE
+  const clrBorderStrong = rgb(0.827, 0.851, 0.886);    // #D3D9E2
+  const clrSurface2     = rgb(0.973, 0.976, 0.984);    // #F8F9FB
+  const clrWarn         = rgb(0.788, 0.318, 0.000);    // out-of-period date
+
   const baseCur = state.baseCurrency;
 
   let logoImage = null;
@@ -1233,6 +1239,26 @@ async function generatePDF() {
   const receiptRefs = [];
   let justBroke = false;
 
+  // ── Drawing helpers ───────────────────────────────────────────────────────
+
+  // Eyebrow label: uppercase, bold, muted, szXs
+  function lbl(text, x, yy) {
+    pg.drawText(text.toUpperCase(), { x, y: yy, size: szXs, font: fontBold, color: clrMuted });
+  }
+  // Body value in Helvetica
+  function val(text, x, yy, extra) {
+    pg.drawText(text, { x, y: yy, size: sz, font: fontBody, color: clrText, ...(extra||{}) });
+  }
+  // Mono value (amounts, dates, FX rates) in Courier
+  function mono(text, x, yy, extra) {
+    pg.drawText(text, { x, y: yy, size: sz, font: fontMono, color: clrText, ...(extra||{}) });
+  }
+  // 3pt accent left-stripe for item/section headers
+  function accentStripe(yy) {
+    pg.drawRectangle({ x: M.left, y: yy - 1, width: 3, height: lh + 1, color: clrAccent });
+  }
+
+  // ── Page management ───────────────────────────────────────────────────────
   function addPage(isFirst) {
     pg = doc.addPage([pageW, pageH]);
     pages.push(pg);
@@ -1246,156 +1272,216 @@ async function generatePDF() {
     if (y - h < M.bottom) addPage(false);
   }
 
+  // Continuation header: light strip with staff + period
   function drawContHeader() {
-    pg.drawText(state.staff, { x: M.left, y, size: sz, font: fontBold, color: black });
-    const periodStr = `Period: ${state.periodFrom} to ${state.periodTo}`;
-    const pw = fontBody.widthOfTextAtSize(periodStr, sz);
-    pg.drawText(periodStr, { x: M.left + W - pw, y, size: sz, font: fontBody, color: gray });
-    y -= lh + 2;
-    pg.drawLine({ start:{x:M.left, y}, end:{x:M.left+W, y}, thickness:1.5, color:accent });
-    y -= lh;
+    const stripH = szXs + lh + 14;
+    pg.drawRectangle({ x: 0, y: y - stripH, width: pageW, height: stripH, color: clrSurface2 });
+    pg.drawLine({ start:{x:0, y}, end:{x:pageW, y}, thickness:0.5, color:clrBorder });
+    pg.drawLine({ start:{x:0, y:y-stripH}, end:{x:pageW, y:y-stripH}, thickness:0.5, color:clrBorder });
+
+    const labY = y - 7;
+    const valY = labY - szXs - 5;
+    lbl('Staff', M.left, labY);
+    lbl('Period', M.left + W * 0.45, labY);
+    pg.drawText(state.staff, { x:M.left, y:valY, size:sz, font:fontBold, color:clrText });
+    mono(`${state.periodFrom} to ${state.periodTo}`, M.left + W * 0.45, valY);
+
+    y -= stripH + 12;
   }
 
+  // ── Page 1 ────────────────────────────────────────────────────────────────
   addPage(true);
 
-  const mm10 = 10 * 2.83465;
-  if (logoImage) {
-    const maxW = (CFG['logo-maxwidth'] || 4) * 28.3465;
-    const scale = Math.min(maxW / logoImage.width, 50 / logoImage.height, 1);
-    const lw = logoImage.width * scale, lhh = logoImage.height * scale;
-    const logoTop = pageH - mm10;
-    pg.drawImage(logoImage, { x: mm10, y: logoTop - lhh, width: lw, height: lhh });
-    y = Math.min(y, logoTop - lhh - 8);
-  } else if (CFG.organization) {
-    pg.drawText(CFG.organization, { x: M.left, y, size: szLg, font: fontBold, color: accent });
-    y -= szLg + 8;
-  }
-  const titleStr = 'REIMBURSEMENT FORM';
-  const tw = fontBold.widthOfTextAtSize(titleStr, szLg);
-  pg.drawText(titleStr, { x: M.left + W - tw, y, size: szLg, font: fontBold, color: accent });
-  y -= szLg + 8;
+  // Header: brand block left | doc title right
+  const hdrTopY = y;
+  const boxSize = 44;
 
+  if (logoImage) {
+    const maxWLogo = (CFG['logo-maxwidth'] || 4) * 28.3465;
+    const scale = Math.min(maxWLogo / logoImage.width, boxSize / logoImage.height, 1);
+    const lw = logoImage.width * scale, lhImg = logoImage.height * scale;
+    pg.drawImage(logoImage, { x: M.left, y: hdrTopY - lhImg, width: lw, height: lhImg });
+  } else {
+    // Initials box (surface-2 fill, border, accent initials)
+    const raw = (CFG.organization || 'ORG').trim();
+    const initials = raw.split(/\s+/).map(w => w[0] || '').join('').toUpperCase().slice(0, 2) || '??';
+    pg.drawRectangle({ x: M.left, y: hdrTopY - boxSize, width: boxSize, height: boxSize,
+      color: clrSurface2, borderColor: clrBorder, borderWidth: 0.5 });
+    const initW = fontBold.widthOfTextAtSize(initials, szLg);
+    pg.drawText(initials, { x: M.left + (boxSize - initW) / 2, y: hdrTopY - boxSize / 2 - szLg * 0.35,
+      size: szLg, font: fontBold, color: clrAccent });
+  }
+
+  // Org name + subtitle
+  const orgX = M.left + boxSize + 11;
+  pg.drawText(CFG.organization || '', { x: orgX, y: hdrTopY - 15, size: sz + 2, font: fontBold, color: clrText });
+  pg.drawText('Expense reimbursement', { x: orgX, y: hdrTopY - 15 - (sz + 2) - 4, size: szSm, font: fontBody, color: clrMuted });
+
+  // Title + claim date (right-aligned)
+  const titleStr = 'Reimbursement';
+  const titleW = fontBold.widthOfTextAtSize(titleStr, szLg);
+  pg.drawText(titleStr, { x: M.left + W - titleW, y: hdrTopY - 15, size: szLg, font: fontBold, color: clrText });
+
+  const nowD = new Date();
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const claimDate = `Claim · ${nowD.getDate()} ${MONTHS[nowD.getMonth()]} ${nowD.getFullYear()}`;
+  const claimDateW = fontMono.widthOfTextAtSize(claimDate, szSm);
+  pg.drawText(claimDate, { x: M.left + W - claimDateW, y: hdrTopY - 15 - szLg - 4, size: szSm, font: fontMono, color: clrMuted });
+
+  y = hdrTopY - boxSize - 10;
+
+  // Hairline below header
+  pg.drawLine({ start:{x:M.left, y}, end:{x:M.left+W, y}, thickness:0.5, color:clrBorder });
+  y -= 12;
+
+  // Intro text
   if (CFG.intro) {
     const introLines = wrapText(CFG.intro, fontBody, sz, W);
-    introLines.forEach(line => { pg.drawText(line, {x:M.left, y, size:sz, font:fontBody, color:gray}); y -= lh; });
-    y -= 4;
+    introLines.forEach(line => { pg.drawText(line, {x:M.left, y, size:sz, font:fontBody, color:clrMuted}); y -= lh; });
+    y -= 6;
   }
 
-  const col2 = W * 0.5;
-  const col3 = W * 0.8;
+  // Staff / Period / Currency info block
+  const infoH = szXs + lh + 14;
+  pg.drawRectangle({ x: M.left - 8, y: y - infoH, width: W + 16, height: infoH, color: clrSurface2 });
+  pg.drawLine({ start:{x:M.left-8, y}, end:{x:M.left+W+8, y}, thickness:0.5, color:clrBorder });
+  pg.drawLine({ start:{x:M.left-8, y:y-infoH}, end:{x:M.left+W+8, y:y-infoH}, thickness:0.5, color:clrBorder });
 
-  pg.drawText('Staff', {x:M.left, y, size:szSm-1, font:fontBold, color:gray});
-  pg.drawText('Period', {x:M.left+col2, y, size:szSm-1, font:fontBold, color:gray});
-  pg.drawText('Currency', {x:M.left+col3, y, size:szSm-1, font:fontBold, color:gray});
-  y -= lh;
-  pg.drawText(state.staff, {x:M.left, y, size:sz, font:fontBody, color:black});
-  pg.drawText(`${state.periodFrom}  to  ${state.periodTo}`, {x:M.left+col2, y, size:sz, font:fontBody, color:black});
-  pg.drawText(baseCur, {x:M.left+col3, y, size:sz, font:fontBold, color:black});
-  y -= lh + 6;
+  const iLabY = y - 7;
+  const iValY = iLabY - szXs - 5;
+  const iC2 = W * 0.45, iC3 = W * 0.78;
 
-  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:1.5, color:accent});
-  y -= lh;
+  lbl('Staff',    M.left,       iLabY);
+  lbl('Period',   M.left + iC2, iLabY);
+  lbl('Currency', M.left + iC3, iLabY);
 
+  pg.drawText(state.staff, { x: M.left, y: iValY, size: sz, font: fontBold, color: clrText });
+  mono(`${state.periodFrom} to ${state.periodTo}`, M.left + iC2, iValY);
+  pg.drawText(baseCur, { x: M.left + iC3, y: iValY, size: sz, font: fontBold, color: clrAccent });
+
+  y -= infoH + 14;
+
+  // ── Items ─────────────────────────────────────────────────────────────────
   state.items.forEach(item => {
-    needSpace(lh * 6);
-    pg.drawText('ITEM / PROJECT / TRAVEL', {x:M.left, y, size:szSm, font:fontBold, color:accent});
-    const subStr = `Subtotal: ${baseCur} ${fmtAmt(item._subtotal)}`;
-    const subW = fontBold.widthOfTextAtSize(subStr, sz);
-    pg.drawText(subStr, {x:M.left+W-subW, y, size:sz, font:fontBold, color:accent});
-    y -= lh;
-    pg.drawText(item.name, {x:M.left, y, size:sz, font:fontBody, color:black});
-    y -= lh + 4;
+    needSpace(lh * 7);
 
+    // Section header: accent stripe + item name left, subtotal right
+    accentStripe(y);
+    pg.drawText(item.name || '(no name)', { x: M.left + 8, y, size: sz, font: fontBold, color: clrTextSoft });
+    const subStr = `${baseCur} ${fmtAmt(item._subtotal)}`;
+    const subW = fontMono.widthOfTextAtSize(subStr, sz);
+    pg.drawText(subStr, { x: M.left + W - subW, y, size: sz, font: fontMono, color: clrAccent });
+    y -= lh + 2;
+
+    // Hairline below section header
+    pg.drawLine({ start:{x:M.left, y}, end:{x:M.left+W, y}, thickness:0.5, color:clrBorder });
+    y -= 8;
+
+    // Lines
     item.lines.forEach((ln, li) => {
-      needSpace(lh * 7);
+      needSpace(lh * 9);
       if (li > 0 && !justBroke) {
         y -= 4;
-        pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:0.3, color:lineCol});
+        pg.drawLine({ start:{x:M.left, y}, end:{x:M.left+W, y}, thickness:0.3, color:clrBorder });
         y -= 8;
       }
-      const c1=0, c2=W*0.22, c3=W*0.68, c4=W*0.82;
 
-      pg.drawText('Date', {x:M.left+c1, y, size:szSm-1, font:fontBold, color:gray});
-      pg.drawText('Vendor', {x:M.left+c2, y, size:szSm-1, font:fontBold, color:gray});
-      pg.drawText('Currency', {x:M.left+c3, y, size:szSm-1, font:fontBold, color:gray});
-      const fxLbl = 'FX rate'; pg.drawText(fxLbl, {x:M.left+W-fontBold.widthOfTextAtSize(fxLbl,szSm-1), y, size:szSm-1, font:fontBold, color:gray});
-      y -= lh;
+      const c1=0, c2=W*0.22, c3=W*0.64;
+
+      // Row 1 — Date | Vendor | Currency | FX rate
+      lbl('Date',     M.left + c1, y);
+      lbl('Vendor',   M.left + c2, y);
+      lbl('Currency', M.left + c3, y);
+      const fxLblStr = 'FX RATE';
+      pg.drawText(fxLblStr, { x: M.left + W - fontBold.widthOfTextAtSize(fxLblStr, szXs), y,
+        size: szXs, font: fontBold, color: clrMuted });
+      y -= szXs + 4;
+
       const dateInPeriod = isDateInPeriod(ln.date);
-      const dateColor = dateInPeriod ? black : rgb(0.9, 0.33, 0);
-      pg.drawText((ln.date || '–') + (dateInPeriod ? '' : ' (!)'), {x:M.left+c1, y, size:sz, font:fontBody, color:dateColor});
-      pg.drawText(truncate(ln.vendor, fontBody, sz, (c3-c2)-8), {x:M.left+c2, y, size:sz, font:fontBody, color:black});
-      pg.drawText(ln.currency, {x:M.left+c3, y, size:sz, font:fontBody, color:black});
+      mono((ln.date || '–') + (dateInPeriod ? '' : ' (!)'), M.left + c1, y,
+        { color: dateInPeriod ? clrText : clrWarn });
+      val(truncate(ln.vendor, fontBody, sz, (c3 - c2) - 8), M.left + c2, y);
+      val(ln.currency || '–', M.left + c3, y);
       const fxStr = ln.currency === baseCur ? '–' : parseFloat(ln.fxRate).toFixed(5);
-      const fxW = fontBody.widthOfTextAtSize(fxStr, sz);
-      pg.drawText(fxStr, {x:M.left+W-fxW, y, size:sz, font:fontBody, color:black});
-      y -= lh + 2;
+      const fxW = fontMono.widthOfTextAtSize(fxStr, sz);
+      mono(fxStr, M.left + W - fxW, y);
+      y -= lh + 4;
 
-      pg.drawText('Description', {x:M.left, y, size:szSm-1, font:fontBold, color:gray});
-      pg.drawText('Receipt', {x:M.left+c3, y, size:szSm-1, font:fontBold, color:gray});
-      const amtLbl = 'Amount'; pg.drawText(amtLbl, {x:M.left+W-fontBold.widthOfTextAtSize(amtLbl,szSm-1), y, size:szSm-1, font:fontBold, color:gray});
-      y -= lh;
-      pg.drawText(truncate(ln.description, fontBody, sz, (c3)-8), {x:M.left, y, size:sz, font:fontBody, color:black});
-      pg.drawText(ln.hasReceipt ? 'Yes' : 'No', {x:M.left+c3, y, size:sz, font:fontBody, color:black});
+      // Row 2 — Description | Receipt | Amount
+      lbl('Description', M.left, y);
+      lbl('Receipt', M.left + c3, y);
+      const amtLblStr = 'AMOUNT';
+      pg.drawText(amtLblStr, { x: M.left + W - fontBold.widthOfTextAtSize(amtLblStr, szXs), y,
+        size: szXs, font: fontBold, color: clrMuted });
+      y -= szXs + 4;
+
+      val(truncate(ln.description, fontBody, sz, c3 - 8), M.left, y);
+      val(ln.hasReceipt ? 'Yes' : 'No', M.left + c3, y);
       const amtStr = `${ln.currency} ${fmtAmt(ln.amount)}`;
-      const amtW = fontBody.widthOfTextAtSize(amtStr, sz);
-      pg.drawText(amtStr, {x:M.left+W-amtW, y, size:sz, font:fontBody, color:black});
-      y -= lh + 2;
+      const amtW = fontMono.widthOfTextAtSize(amtStr, sz);
+      mono(amtStr, M.left + W - amtW, y);
+      y -= lh + 4;
 
-      pg.drawText('Account', {x:M.left, y, size:szSm-1, font:fontBold, color:gray});
-      pg.drawText('Program', {x:M.left+W*0.5, y, size:szSm-1, font:fontBold, color:gray});
-      y -= lh;
-      pg.drawText(ln.account || '–', {x:M.left, y, size:sz, font:fontBody, color:black});
+      // Row 3 — Account | Program
+      lbl('Account', M.left, y);
+      lbl('Program', M.left + W * 0.5, y);
+      y -= szXs + 4;
+
+      val(truncate(ln.account || '–', fontBody, sz, W * 0.5 - 8), M.left, y);
       const progs = ln.programs || [];
       if (progs.length <= 1) {
         const pe = progs[0] || {};
         const progStr = pe.program === 'Other' ? `Other: ${pe.programOther}` : (pe.program || '–');
-        pg.drawText(truncate(progStr, fontBody, sz, W * 0.5 - 8), {x:M.left+W*0.5, y, size:sz, font:fontBody, color:black});
+        val(truncate(progStr, fontBody, sz, W * 0.5 - 8), M.left + W * 0.5, y);
         y -= lh;
       } else {
-        const lineBaseAmt = (() => { const a = parseFloat(ln.amount)||0, r = parseFloat(ln.fxRate)||1; return r>0?a/r:0; })();
+        const lineBaseAmt = (() => { const a=parseFloat(ln.amount)||0, r=parseFloat(ln.fxRate)||1; return r>0?a/r:0; })();
         progs.forEach((pe, pi) => {
           if (pi > 0) needSpace(lh);
           const progStr = pe.program === 'Other' ? `Other: ${pe.programOther}` : (pe.program || '–');
           const pct = parseFloat(pe.percent) || 0;
           const progAmt = lineBaseAmt * pct / 100;
-          const suffix = `  ${pct.toFixed(2)}% – ${baseCur} ${fmtAmt(progAmt)}`;
-          pg.drawText(truncate(progStr, fontBody, sz, W * 0.45 - 8), {x:M.left+W*0.5, y, size:sz, font:fontBody, color:black});
-          const sfxW = fontBody.widthOfTextAtSize(suffix, szSm);
-          pg.drawText(suffix, {x:M.left+W-sfxW, y, size:szSm, font:fontBody, color:gray});
+          const suffix = `${pct.toFixed(2)}% · ${baseCur} ${fmtAmt(progAmt)}`;
+          val(truncate(progStr, fontBody, sz, W * 0.42 - 8), M.left + W * 0.5, y);
+          const sfxW = fontMono.widthOfTextAtSize(suffix, szSm);
+          pg.drawText(suffix, { x: M.left + W - sfxW, y, size: szSm, font: fontMono, color: clrMuted });
           y -= lh;
         });
       }
 
+      // Receipt page reference (filled in after receipt pages are built)
       if (ln.hasReceipt && ln.receipts.length > 0) {
         ln.receipts.forEach((r, ri) => {
           const key = `${ln.id}-${ri}`;
-          const refX = M.left + W * 0.6;
-          receiptRefs.push({ pageIdx: pages.length - 1, x: refX, y, key });
+          receiptRefs.push({ pageIdx: pages.length - 1, x: M.left + W * 0.55, y, key });
           y -= lh;
         });
       } else if (!ln.hasReceipt) {
         needSpace(lh * 2);
-        pg.drawText('Explanation for no receipt:', {x:M.left, y, size:szSm-1, font:fontBold, color:gray});
-        y -= lh;
+        lbl('Reason for no receipt', M.left, y);
+        y -= szXs + 4;
         const explLines = wrapText(ln.noReceiptExplanation || '–', fontBody, sz, W);
-        explLines.forEach(line => {
-          needSpace(lh);
-          pg.drawText(line, {x:M.left, y, size:sz, font:fontBody, color:black});
-          y -= lh;
-        });
+        explLines.forEach(line => { needSpace(lh); val(line, M.left, y); y -= lh; });
       }
+
       y -= 6;
     });
+
+    y -= 10;
   });
 
-  needSpace(lh * 2);
-  pg.drawLine({start:{x:M.left,y}, end:{x:M.left+W,y}, thickness:3, color:accent});
+  // Grand total
+  needSpace(lh * 3 + 6);
+  y -= 6;
+  pg.drawLine({ start:{x:M.left, y}, end:{x:M.left+W, y}, thickness:1.5, color:clrBorderStrong });
   y -= lh;
-  const gtStr = `Total reimbursement claim: ${baseCur} ${fmtAmt(state._grandTotal)}`;
-  const gtW = fontBold.widthOfTextAtSize(gtStr, sz + 2);
-  pg.drawText(gtStr, {x: M.left + W - gtW, y, size: sz+2, font: fontBold, color: accent});
 
-  // ---- RECEIPT PAGES ----
+  pg.drawText('Total reimbursement claim', { x: M.left, y, size: sz, font: fontBold, color: clrTextSoft });
+  const gtStr = `${baseCur} ${fmtAmt(state._grandTotal)}`;
+  const gtW = fontBold.widthOfTextAtSize(gtStr, szLg);
+  pg.drawText(gtStr, { x: M.left + W - gtW, y: y - (szLg - sz) / 2, size: szLg, font: fontBold, color: clrAccent });
+
+  // ── Receipt pages ─────────────────────────────────────────────────────────
   const formPageCount = pages.length;
   const receiptPageMap = {};
 
@@ -1416,7 +1502,7 @@ async function generatePDF() {
             const ep = doc.addPage([pageW, pageH]);
             pages.push(ep);
             ep.drawText(`Could not embed: ${r.name}`, {x:M.left, y:pageH-M.top, size:sz, font:fontBody, color:rgb(0.8,0,0)});
-            ep.drawText(String(e.message || e), {x:M.left, y:pageH-M.top-lh, size:szSm, font:fontBody, color:gray});
+            ep.drawText(String(e.message || e), {x:M.left, y:pageH-M.top-lh, size:szSm, font:fontBody, color:clrMuted});
           }
         } else {
           const rp = doc.addPage([pageW, pageH]);
@@ -1425,13 +1511,10 @@ async function generatePDF() {
             let img;
             if (r.type === 'image/png') img = await doc.embedPng(r.data);
             else img = await doc.embedJpg(r.data);
-            const maxW2 = pageW - M.left - M.right;
-            const maxH2 = pageH - M.top - M.bottom;
+            const maxW2 = pageW - M.left - M.right, maxH2 = pageH - M.top - M.bottom;
             const sc = Math.min(maxW2 / img.width, maxH2 / img.height, 1);
             const iw = img.width * sc, ih = img.height * sc;
-            const ix = M.left + (maxW2 - iw) / 2;
-            const iy = M.bottom + (maxH2 - ih) / 2;
-            rp.drawImage(img, {x:ix, y:iy, width:iw, height:ih});
+            rp.drawImage(img, { x: M.left + (maxW2-iw)/2, y: M.bottom + (maxH2-ih)/2, width:iw, height:ih });
           } catch (e) {
             rp.drawText(`Could not embed: ${r.name}`, {x:M.left, y:pageH-M.top, size:sz, font:fontBody, color:rgb(0.8,0,0)});
           }
@@ -1441,31 +1524,33 @@ async function generatePDF() {
     }
   }
 
+  // ── Back-fill receipt page references ─────────────────────────────────────
   receiptRefs.forEach(ref => {
     const pageNum = receiptPageMap[ref.key];
-    if (pageNum != null) {
-      const pg2 = pages[ref.pageIdx];
-      pg2.drawText(`See page ${pageNum} for receipt`, {x:ref.x, y:ref.y, size:szSm, font:fontBody, color:gray});
-    }
+    if (pageNum != null)
+      pages[ref.pageIdx].drawText(`See page ${pageNum} for receipt`,
+        { x:ref.x, y:ref.y, size:szSm, font:fontBody, color:clrMuted });
   });
 
+  // ── Footers on every page ─────────────────────────────────────────────────
   const totalPages = pages.length;
   const nowTs = new Date();
   const printed = `${nowTs.getFullYear()}-${String(nowTs.getMonth()+1).padStart(2,'0')}-${String(nowTs.getDate()).padStart(2,'0')} ${String(nowTs.getHours()).padStart(2,'0')}:${String(nowTs.getMinutes()).padStart(2,'0')}`;
 
   pages.forEach((p, i) => {
     const fy = M.bottom - 30;
-    p.drawLine({start:{x:M.left, y:fy+18}, end:{x:M.left+W, y:fy+18}, thickness:0.5, color:lineCol});
-    p.drawText('Reimbursement form', {x:M.left, y:fy, size:szSm-1, font:fontBody, color:gray});
-    p.drawText(state.staff, {x:M.left, y:fy-lh+2, size:szSm-1, font:fontBody, color:gray});
+    p.drawLine({ start:{x:M.left, y:fy+18}, end:{x:M.left+W, y:fy+18}, thickness:0.5, color:clrBorder });
+    p.drawText('Reimbursement form', { x:M.left, y:fy, size:szXs, font:fontBody, color:clrMuted });
+    p.drawText(state.staff, { x:M.left, y:fy-lh+2, size:szXs, font:fontBody, color:clrMuted });
     const pgStr = `Page ${i+1}/${totalPages}`;
-    const pgW2 = fontBody.widthOfTextAtSize(pgStr, szSm-1);
-    p.drawText(pgStr, {x:M.left+W-pgW2, y:fy, size:szSm-1, font:fontBody, color:gray});
+    const pgW2 = fontBody.widthOfTextAtSize(pgStr, szXs);
+    p.drawText(pgStr, { x:M.left+W-pgW2, y:fy, size:szXs, font:fontBody, color:clrMuted });
     const prStr = `Printed: ${printed}`;
-    const prW = fontBody.widthOfTextAtSize(prStr, szSm-1);
-    p.drawText(prStr, {x:M.left+W-prW, y:fy-lh+2, size:szSm-1, font:fontBody, color:gray});
+    const prW = fontBody.widthOfTextAtSize(prStr, szXs);
+    p.drawText(prStr, { x:M.left+W-prW, y:fy-lh+2, size:szXs, font:fontBody, color:clrMuted });
   });
 
+  // ── Save and download ──────────────────────────────────────────────────────
   const pdfBytes = await doc.save();
   const blob = new Blob([pdfBytes], {type:'application/pdf'});
   const url = URL.createObjectURL(blob);
