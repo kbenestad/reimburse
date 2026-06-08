@@ -825,13 +825,10 @@ function render() {
 
   const claimCard = el('div', {className:'kb-card'});
   claimCard.appendChild(el('h2', {className:'kb-card__title'}, 'Claimant'));
-  const claimGrid = el('div', {className:'kb-grid cols-3'});
-  claimGrid.appendChild(kbField('Staff', staffWrap, {cls:''}));
-  // Period from + to span col 2-3
-  const periodGroup = el('div', {style:{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px 16px', gridColumn:'span 2'}});
-  periodGroup.appendChild(kbField('Period from', fromInput));
-  periodGroup.appendChild(kbField('Period to', toInput));
-  claimGrid.appendChild(periodGroup);
+  const claimGrid = el('div', {className:'kb-grid cols-4'});
+  claimGrid.appendChild(kbField('Staff', staffWrap));
+  claimGrid.appendChild(kbField('Period from', fromInput));
+  claimGrid.appendChild(kbField('Period to', toInput));
   claimGrid.appendChild(kbField('Base currency', baseCurDD));
   claimCard.appendChild(claimGrid);
   wrap.appendChild(claimCard);
