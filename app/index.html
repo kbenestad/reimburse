@@ -355,7 +355,7 @@ body{
 
 /* ── Responsive ───────────────────────────────────────────────────────────── */
 @media (max-width:680px){
-  .kb-grid.cols-2,.kb-grid.cols-3,.kb-grid.cols-4{grid-template-columns:1fr;}
+  .kb-grid.cols-2,.kb-grid.cols-3,.kb-grid.cols-4,.kb-grid.claim-grid{grid-template-columns:1fr;}
   .kb-header{flex-direction:column;gap:14px;}
   .kb-doctitle{text-align:left;}
   .kb-line-section.row1,.kb-line-section.row2,.kb-line-section.row3{grid-template-columns:1fr;}
@@ -808,10 +808,6 @@ function render() {
   const staffInput = el('input', {className:'kb-input', type:'text', value: state.staff, placeholder:'Full name'});
   staffInput.addEventListener('input', () => { state.staff = staffInput.value; localStorage.setItem('reimb-staff', staffInput.value); });
 
-  const newFormBtn = el('button', {type:'button', className:'kb-btn kb-btn--ghost', style:{flexShrink:'0'}, onClick: onNewForm}, 'New form');
-  const staffWrap = el('div', {style:{display:'flex', gap:'8px', alignItems:'center'}});
-  staffWrap.append(staffInput, newFormBtn);
-
   const fromInput = el('input', {className:'kb-input', type:'date'});
   fromInput.value = state.periodFrom;
   fromInput.addEventListener('change', () => { state.periodFrom = fromInput.value; updatePeriodMeta(); });
@@ -829,21 +825,15 @@ function render() {
 
   const claimCard = el('div', {className:'kb-card'});
   claimCard.appendChild(el('h2', {className:'kb-card__title'}, 'Claimant'));
-  const claimGrid = el('div', {className:'kb-grid cols-4'});
-  claimGrid.appendChild(kbField('Staff', staffWrap));
+  const claimGrid = el('div', {className:'kb-grid claim-grid', style:{gridTemplateColumns:'2fr 0.85fr 0.85fr 0.5fr'}});
+  claimGrid.appendChild(kbField('Staff', staffInput));
   claimGrid.appendChild(kbField('Period from', fromInput));
   claimGrid.appendChild(kbField('Period to', toInput));
   claimGrid.appendChild(kbField('Base currency', baseCurDD));
   claimCard.appendChild(claimGrid);
 
-  const fillPeriodBtn = el('button', {type:'button', className:'kb-btn kb-btn--ghost', style:{marginTop:'12px'}}, 'New claim');
-  fillPeriodBtn.addEventListener('click', () => {
-    const p = defaultPeriod();
-    state.periodFrom = p.from; state.periodTo = p.to;
-    fromInput.value = p.from; toInput.value = p.to;
-    updatePeriodMeta();
-  });
-  claimCard.appendChild(fillPeriodBtn);
+  const newFormBtn = el('button', {type:'button', className:'kb-btn kb-btn--ghost', style:{marginTop:'12px'}, onClick: onNewForm}, 'New form');
+  claimCard.appendChild(newFormBtn);
   wrap.appendChild(claimCard);
 
   // ── Expenses card ─────────────────────────────────────────────────────────
